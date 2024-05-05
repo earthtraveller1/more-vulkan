@@ -1,12 +1,15 @@
-#include <GLFW/glfw3.h>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <iostream>
+#include <optional>
 #include <string_view>
 #include <vector>
 
+#include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
+
+#include "enumerate.hpp"
 
 namespace {
 struct glfw_init_failed_exception : public std::exception {
@@ -29,6 +32,20 @@ struct vulkan_exception : public std::exception {
     virtual const char *what() const noexcept override {
         return "A Vulkan error occured.";
     }
+};
+
+struct no_adequate_devices_exception : public std::exception {
+    virtual const char *what() const noexcept override {
+        return "No adequate devices found.";
+    }
+};
+
+struct vulkan_device_t {
+    VkPhysicalDevice physical;
+    VkDevice logical;
+
+    uint32_t graphics_family;
+    uint32_t present_family;
 };
 
 // May throw glfw_init_failed_exception and
@@ -110,9 +127,64 @@ auto create_vulkan_instance(bool p_enable_validation) -> VkInstance {
 
     return instance;
 }
+
+// May throw vulkan_exception
+auto create_vulkan_device(VkInstance p_instance, VkSurfaceKHR p_surface)
+    -> vulkan_device_t {
+    uint32_t device_count;
+    vkEnumeratePhysicalDevices(p_instance, &device_count, nullptr);
+
+    if (device_count == 0) {
+        throw no_adequate_devices_exception{};
+    }
+
+    std::vector<VkPhysicalDevice> devices(device_count);
+    vkEnumeratePhysicalDevices(p_instance, &device_count, devices.data());
+
+    vulkan_device_t device{};
+
+    for (const auto &physical_device : devices) {
+        uint32_t queue_family_count;
+        vkGetPhysicalDeviceQueueFamilyProperties(
+            physical_device, &queue_family_count, nullptr
+        );
+
+        std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
+        vkGetPhysicalDeviceQueueFamilyProperties(
+            physical_device, &queue_family_count, queue_families.data()
+        );
+
+        std::optional<uint32_t> graphics_family, present_family;
+
+        for (auto [i, queue_family] :
+             enumerate(queue_families.begin(), queue_families.end())) {
+            if (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                graphics_family = i;
+            }
+
+            VkBool32 present_support = VK_FALSE;
+            vkGetPhysicalDeviceSurfaceSupportKHR(
+                physical_device, i, p_surface, &present_support
+            );
+
+            if (present_support == VK_TRUE) {
+                present_family = i;
+            }
+        }
+
+        if (graphics_family.has_value() && present_family.has_value()) {
+            device.physical = physical_device;
+            device.graphics_family = graphics_family.value();
+            device.present_family = present_family.value();
+            break;
+        }
+    }
+
+    return device;
+}
 } // namespace
 
-int main(int p_argc, const char *const * const p_argv) {
+int main(int p_argc, const char *const *const p_argv) {
     bool enable_validation = false;
 
     for (auto arg = p_argv; arg < p_argv + p_argc; ++arg) {
