@@ -1,3 +1,4 @@
+#include <array>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -46,6 +47,13 @@ struct vulkan_device_t {
 
     uint32_t graphics_family;
     uint32_t present_family;
+
+    VkQueue graphics_queue;
+    VkQueue present_queue;
+
+    ~vulkan_device_t() {
+        vkDestroyDevice(logical, nullptr);
+    }
 };
 
 // May throw glfw_init_failed_exception and
@@ -178,6 +186,55 @@ auto create_vulkan_device(VkInstance p_instance, VkSurfaceKHR p_surface)
             device.present_family = present_family.value();
             break;
         }
+    }
+
+    if (device.physical == VK_NULL_HANDLE) {
+        throw no_adequate_devices_exception{};
+    }
+
+    std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+
+    float queue_priority = 1.0f;
+    if (device.graphics_family != device.present_family) {
+        std::array<uint32_t, 2> queue_family_indices{
+            device.graphics_family, device.present_family
+        };
+
+        for (auto index : queue_family_indices) {
+            queue_create_infos.push_back({
+                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .queueFamilyIndex = index,
+                .queueCount = 1,
+                .pQueuePriorities = &queue_priority,
+            });
+        }
+    } else {
+        queue_create_infos.push_back({
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .queueFamilyIndex = device.graphics_family,
+            .queueCount = 1,
+            .pQueuePriorities = &queue_priority,
+        });
+    }
+
+    const VkDeviceCreateInfo device_create_info{
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size()),
+        .pQueueCreateInfos = queue_create_infos.data(),
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = nullptr,
+        .enabledExtensionCount = 0,
+        .ppEnabledExtensionNames = nullptr,
+        .pEnabledFeatures = nullptr,
+    };
+
+    auto result = vkCreateDevice(device.physical, &device_create_info, nullptr, &device.logical);
+    if (result != VK_SUCCESS) {
+        throw vulkan_exception{result};
     }
 
     return device;
