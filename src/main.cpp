@@ -7,8 +7,8 @@
 #include <string_view>
 #include <vector>
 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan.h>
 
 #include "enumerate.hpp"
 
@@ -41,6 +41,18 @@ struct no_adequate_devices_exception : public std::exception {
     }
 };
 
+struct window_t {
+    GLFWwindow* window;
+    VkSurfaceKHR surface;
+    VkInstance instance;
+
+    ~window_t() {
+        vkDestroySurfaceKHR(instance, surface, nullptr);
+        glfwDestroyWindow(window);
+        glfwTerminate();
+    }
+};
+
 struct vulkan_device_t {
     VkPhysicalDevice physical;
     VkDevice logical;
@@ -58,8 +70,8 @@ struct vulkan_device_t {
 
 // May throw glfw_init_failed_exception and
 // glfw_window_creation_failed_exception
-auto create_window(std::string_view p_title, int p_width, int p_height)
-    -> GLFWwindow * {
+auto create_window(VkInstance p_instance, std::string_view p_title, int p_width, int p_height)
+    -> window_t {
     if (!glfwInit()) {
         throw glfw_init_failed_exception{};
     }
@@ -75,7 +87,19 @@ auto create_window(std::string_view p_title, int p_width, int p_height)
         throw glfw_window_creation_failed_exception{};
     }
 
-    return window;
+    VkSurfaceKHR surface;
+    const auto result = glfwCreateWindowSurface(p_instance, window, NULL, &surface);
+    if (result != VK_SUCCESS) {
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        throw vulkan_exception{result};
+    }
+
+    return {
+        .window = window,
+        .surface = surface,
+        .instance = p_instance,
+    };
 }
 
 // May throw vulkan_exception
@@ -252,15 +276,13 @@ int main(int p_argc, const char *const *const p_argv) {
 
     try {
         const auto instance = create_vulkan_instance(enable_validation);
-        const auto window = create_window("Hello!", 1280, 720);
+        const auto window = create_window(instance, "Hello!", 1280, 720);
+        const auto device = create_vulkan_device(instance, window.surface);
 
-        glfwShowWindow(window);
-        while (!glfwWindowShouldClose(window)) {
+        glfwShowWindow(window.window);
+        while (!glfwWindowShouldClose(window.window)) {
             glfwPollEvents();
         }
-
-        glfwDestroyWindow(window);
-        glfwTerminate();
 
         vkDestroyInstance(instance, nullptr);
     } catch (const vulkan_exception &e) {
