@@ -1,9 +1,3 @@
-#include <array>
-#include <cstring>
-#include <iostream>
-#include <optional>
-#include <vector>
-
 #include <GLFW/glfw3.h>
 
 #include "enumerate.hpp"

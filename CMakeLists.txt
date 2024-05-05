@@ -21,6 +21,8 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan)
 
+target_precompile_headers(${PROJECT_NAME} PRIVATE src/precompiled.hpp)
+
 if (NOT MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()

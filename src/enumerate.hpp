@@ -1,6 +1,3 @@
-#include <cstddef>
-#include <iterator>
-
 template <typename T> struct enumerate {
     explicit enumerate(T p_begin, T p_end) : m_begin(p_begin), m_end(p_end) {}
 
