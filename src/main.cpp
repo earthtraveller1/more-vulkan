@@ -255,15 +255,20 @@ struct vulkan_instance_t {
             "VK_LAYER_KHRONOS_validation"
         };
 
-        const VkInstanceCreateInfo instance_create_info{
+        VkInstanceCreateInfo instance_create_info{
             .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
             .pNext = nullptr,
             .pApplicationInfo = &application_info,
-            .enabledLayerCount = validation_layer_count,
-            .ppEnabledLayerNames = validation_layers,
+            .enabledLayerCount = 0,
+            .ppEnabledLayerNames = nullptr,
             .enabledExtensionCount = glfw_extension_count,
             .ppEnabledExtensionNames = glfw_extensions,
         };
+
+        if (p_enable_validation) {
+            instance_create_info.enabledLayerCount = validation_layer_count;
+            instance_create_info.ppEnabledLayerNames = validation_layers;
+        }
 
         VkInstance instance;
         const auto result =
