@@ -1,9 +1,3 @@
-#include <cstdlib>
-#include <cstring>
-#include <exception>
-#include <iostream>
-#include <string_view>
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 

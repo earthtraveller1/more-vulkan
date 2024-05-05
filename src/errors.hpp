@@ -2,7 +2,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include <exception>
 
 namespace mv {
 struct glfw_init_failed_exception : public std::exception {
