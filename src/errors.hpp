@@ -31,4 +31,10 @@ struct no_adequate_devices_exception : public std::exception {
         return "No adequate devices found.";
     }
 };
+
+struct no_adequate_swapchain_settings_exception : public std::exception {
+    virtual const char *what() const noexcept override {
+        return "There appears to be no adequate options for the swap chain.";
+    }
+};
 }
