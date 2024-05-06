@@ -115,7 +115,28 @@ auto vulkan_device_t::create(VkInstance p_instance, VkSurfaceKHR p_surface)
             }
         }
 
-        if (graphics_family.has_value() && present_family.has_value()) {
+        uint32_t extension_count;
+        vkEnumerateDeviceExtensionProperties(
+            physical_device, nullptr, &extension_count, nullptr
+        );
+
+        std::vector<VkExtensionProperties> extensions(extension_count);
+        vkEnumerateDeviceExtensionProperties(
+            physical_device, nullptr, &extension_count, extensions.data()
+        );
+
+        bool supports_swapchain = false;
+
+        for (const auto &extension : extensions) {
+            if (std::strcmp(
+                    extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME
+                ) == 0) {
+                supports_swapchain = true;
+            }
+        }
+
+        if (graphics_family.has_value() && present_family.has_value() &&
+            supports_swapchain) {
             device.physical = physical_device;
             device.graphics_family = graphics_family.value();
             device.present_family = present_family.value();
@@ -126,6 +147,12 @@ auto vulkan_device_t::create(VkInstance p_instance, VkSurfaceKHR p_surface)
     if (device.physical == VK_NULL_HANDLE) {
         throw no_adequate_devices_exception{};
     }
+
+    VkPhysicalDeviceProperties device_properties;
+    vkGetPhysicalDeviceProperties(device.physical, &device_properties);
+
+    std::cout << "[INFO]: Selected the " << device_properties.deviceName
+              << " graphics card.\n";
 
     std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
 
@@ -156,6 +183,10 @@ auto vulkan_device_t::create(VkInstance p_instance, VkSurfaceKHR p_surface)
         });
     }
 
+    const std::array<const char *, 1> enabled_extensions{
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
     const VkDeviceCreateInfo device_create_info{
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .queueCreateInfoCount =
@@ -163,8 +194,8 @@ auto vulkan_device_t::create(VkInstance p_instance, VkSurfaceKHR p_surface)
         .pQueueCreateInfos = queue_create_infos.data(),
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = nullptr,
-        .enabledExtensionCount = 0,
-        .ppEnabledExtensionNames = nullptr,
+        .enabledExtensionCount = enabled_extensions.size(),
+        .ppEnabledExtensionNames = enabled_extensions.data(),
         .pEnabledFeatures = nullptr,
     };
 
