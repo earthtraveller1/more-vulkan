@@ -4,57 +4,7 @@
 #include "enumerate.hpp"
 #include "device.hpp"
 #include "errors.hpp"
-
-namespace {
-
-struct window_t {
-    GLFWwindow *window;
-    VkSurfaceKHR surface;
-    VkInstance instance;
-
-    // May throw glfw_init_failed_exception and
-    // glfw_window_creation_failed_exception
-    static auto create(
-        VkInstance p_instance, std::string_view p_title, int p_width,
-        int p_height
-    ) -> window_t {
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-
-        const auto window =
-            glfwCreateWindow(p_width, p_height, p_title.data(), NULL, NULL);
-        if (window == NULL) {
-            glfwTerminate();
-            throw mv::glfw_window_creation_failed_exception{};
-        }
-
-        VkSurfaceKHR surface;
-        const auto result =
-            glfwCreateWindowSurface(p_instance, window, NULL, &surface);
-        if (result != VK_SUCCESS) {
-            std::cerr << "[ERROR]: Failed to create the window surface.\n";
-
-            glfwDestroyWindow(window);
-            glfwTerminate();
-            throw mv::vulkan_exception{result};
-        }
-
-        return {
-            .window = window,
-            .surface = surface,
-            .instance = p_instance,
-        };
-    }
-
-    ~window_t() {
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-        glfwDestroyWindow(window);
-        glfwTerminate();
-    }
-};
-
-} // namespace
+#include "present.hpp"
 
 int main(int p_argc, const char *const *const p_argv) {
     bool enable_validation = false;
@@ -71,7 +21,7 @@ int main(int p_argc, const char *const *const p_argv) {
 
     try {
         const auto instance = mv::vulkan_instance_t::create(enable_validation);
-        const auto window = window_t::create(instance, "Hello!", 1280, 720);
+        const auto window = mv::window_t::create(instance, "Hello!", 1280, 720);
         const auto device = mv::vulkan_device_t::create(instance, window.surface);
 
         glfwShowWindow(window.window);
