@@ -44,7 +44,7 @@ auto window_t::create(
 auto mv::swapchain_t::create(
     const vulkan_device_t &p_device, const window_t &p_window
 ) -> swapchain_t {
-    swapchain_t swapchain;
+    swapchain_t swapchain{VK_NULL_HANDLE, p_device};
 
     uint32_t surface_format_count;
     vkGetPhysicalDeviceSurfaceFormatsKHR(

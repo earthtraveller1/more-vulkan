@@ -1,10 +1,12 @@
 #pragma once
 
+#include "common.hpp"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include "device.hpp"
+
 namespace mv {
-struct vulkan_device_t;
 
 struct window_t {
     GLFWwindow *window;
@@ -25,7 +27,19 @@ struct window_t {
 
 struct swapchain_t {
     VkSwapchainKHR swapchain;
+    const vulkan_device_t &device;
 
-    static auto create(const vulkan_device_t& device, const window_t& window) -> swapchain_t;
+    swapchain_t(VkSwapchainKHR p_swapchain, const vulkan_device_t &p_device)
+        : swapchain(p_swapchain), device(p_device) {}
+
+    static auto create(const vulkan_device_t &device, const window_t &window)
+        -> swapchain_t;
+
+    NO_COPY(swapchain_t);
+    YES_MOVE(swapchain_t);
+
+    inline ~swapchain_t() {
+        vkDestroySwapchainKHR(device.logical, swapchain, nullptr);
+    }
 };
 } // namespace mv
