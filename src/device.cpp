@@ -135,8 +135,19 @@ auto vulkan_device_t::create(VkInstance p_instance, VkSurfaceKHR p_surface)
             }
         }
 
+        uint32_t surface_format_count;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(
+            physical_device, p_surface, &surface_format_count, nullptr
+        );
+
+        uint32_t present_mode_count;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(
+            physical_device, p_surface, &present_mode_count, nullptr
+        );
+
         if (graphics_family.has_value() && present_family.has_value() &&
-            supports_swapchain) {
+            supports_swapchain && surface_format_count > 0 &&
+            present_mode_count > 0) {
             device.physical = physical_device;
             device.graphics_family = graphics_family.value();
             device.present_family = present_family.value();
