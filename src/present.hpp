@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 
 namespace mv {
+struct vulkan_device_t;
+
 struct window_t {
     GLFWwindow *window;
     VkSurfaceKHR surface;
@@ -19,5 +21,11 @@ struct window_t {
         glfwDestroyWindow(window);
         glfwTerminate();
     }
+};
+
+struct swapchain_t {
+    VkSwapchainKHR swapchain;
+
+    static auto create(const vulkan_device_t& device, const window_t& window) -> swapchain_t;
 };
 } // namespace mv
