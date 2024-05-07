@@ -44,8 +44,6 @@ auto window_t::create(
 auto mv::swapchain_t::create(
     const vulkan_device_t &p_device, const window_t &p_window
 ) -> swapchain_t {
-    swapchain_t swapchain{VK_NULL_HANDLE, p_device};
-
     uint32_t surface_format_count;
     vkGetPhysicalDeviceSurfaceFormatsKHR(
         p_device.physical, p_window.surface, &surface_format_count, nullptr
@@ -151,13 +149,61 @@ auto mv::swapchain_t::create(
             surface_capabilities.maxImageCount;
     }
 
+    VkSwapchainKHR swapchain;
     const auto result = vkCreateSwapchainKHR(
-        p_device.logical, &swapchain_create_info, nullptr, &swapchain.swapchain
+        p_device.logical, &swapchain_create_info, nullptr, &swapchain
     );
     if (result != VK_SUCCESS) {
         std::cerr << "[ERROR]: Failed to create the swapchain." << std::endl;
         throw mv::vulkan_exception{result};
     }
 
-    return swapchain;
+    uint32_t image_count;
+    vkGetSwapchainImagesKHR(p_device.logical, swapchain, &image_count, nullptr);
+
+    std::vector<VkImage> images(image_count);
+    vkGetSwapchainImagesKHR(
+        p_device.logical, swapchain, &image_count, images.data()
+    );
+
+    std::vector<VkImageView> image_views;
+
+    for (const auto &image : images) {
+        VkImageViewCreateInfo image_view_create_info{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = image,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = surface_format.format,
+            .components =
+                {
+                    .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+                },
+            .subresourceRange =
+                {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+        };
+
+        VkImageView image_view;
+        const auto result = vkCreateImageView(
+            p_device.logical, &image_view_create_info, nullptr, &image_view
+        );
+
+        if (result != VK_SUCCESS) {
+            std::cerr << "[ERROR]: Failed to create an image view for the "
+                         "swapchain.\n";
+            throw vulkan_exception{result};
+        }
+
+        image_views.push_back(image_view);
+    }
+
+    return {swapchain, p_device, std::move(images), std::move(image_views)};
 }
