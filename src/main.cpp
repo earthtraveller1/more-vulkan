@@ -23,6 +23,7 @@ int main(int p_argc, const char *const *const p_argv) {
         const auto instance = mv::vulkan_instance_t::create(enable_validation);
         const auto window = mv::window_t::create(instance, "Hello!", 1280, 720);
         const auto device = mv::vulkan_device_t::create(instance, window.surface);
+        const auto swapchain = mv::swapchain_t::create(device, window);
 
         glfwShowWindow(window.window);
         while (!glfwWindowShouldClose(window.window)) {
