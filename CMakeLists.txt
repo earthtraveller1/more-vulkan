@@ -19,6 +19,16 @@ find_package(Vulkan)
 aux_source_directory(src SOURCES)
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+file(GLOB SHADERS shaders/*.vert shaders/*.frag)
+foreach(SHADER ${SHADERS})
+    add_custom_command(
+        OUTPUT ${SHADER}.spv
+        COMMAND glslc -o ${SHADER}.spv ${SHADER}
+        DEPENDS ${SHADER}
+    )
+    target_sources(${PROJECT_NAME} PRIVATE ${SHADER}.spv)
+endforeach()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan)
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE src/precompiled.hpp)
