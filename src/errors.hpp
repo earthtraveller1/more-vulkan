@@ -37,4 +37,25 @@ struct no_adequate_swapchain_settings_exception : public std::exception {
         return "There appears to be no adequate options for the swap chain.";
     }
 };
+
+struct file_exception: public std::exception {
+    enum class type_t {
+        open,
+        read,
+    } type;
+
+    std::string file_name;
+
+    file_exception(type_t p_type, std::string_view p_file_name)
+        : type(p_type), file_name(p_file_name.data()) {}
+
+    virtual const char *what() const noexcept override {
+        switch (type) {
+            case type_t::open:
+                return "Failed to open file.";
+            case type_t::read:
+                return "Failed to read file.";
+        }
+    }
+};
 }
