@@ -60,6 +60,34 @@ struct render_pass_t {
     }
 };
 
+struct buffer_t {
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+    VkDeviceSize size;
+
+    enum class type_t { vertex, index, staging } type;
+
+    const mv::vulkan_device_t &device;
+
+    buffer_t(
+        VkBuffer p_buffer, VkDeviceMemory p_memory, VkDeviceSize p_size,
+        type_t p_type, const mv::vulkan_device_t &p_device
+    )
+        : buffer(p_buffer), memory(p_memory), size(p_size), type(p_type),
+          device(p_device) {}
+
+    static auto
+    create(const mv::vulkan_device_t &device, VkDeviceSize size, type_t type) -> buffer_t;
+
+    NO_COPY(buffer_t);
+    YES_MOVE(buffer_t);
+
+    ~buffer_t() {
+        vkDestroyBuffer(device.logical, buffer, nullptr);
+        vkFreeMemory(device.logical, memory, nullptr);
+    }
+};
+
 struct vector_3f_t {
     float x;
     float y;
@@ -84,4 +112,4 @@ constexpr static std::array<VkVertexInputAttributeDescription, 1>
         .offset = offsetof(vertex_t, position),
     }};
 
-}
+} // namespace mv
