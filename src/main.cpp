@@ -10,17 +10,24 @@
 #include "present.hpp"
 
 namespace {
+struct render_pass_t;
+
 struct graphics_pipeline_t {
     VkPipeline pipeline;
+    VkPipelineLayout layout;
+
+    const render_pass_t& render_pass;
+
     const mv::vulkan_device_t &device;
 
     graphics_pipeline_t(
-        VkPipeline p_pipeline, const mv::vulkan_device_t &p_device
+        VkPipeline p_pipeline, const render_pass_t& p_render_pass, VkPipelineLayout p_layout,
+        const mv::vulkan_device_t &p_device
     )
-        : pipeline(p_pipeline), device(p_device) {}
+        : pipeline(p_pipeline),  layout(p_layout), render_pass(p_render_pass), device(p_device) {}
 
     static auto create(
-        const mv::vulkan_device_t &device, std::string_view vertex_shader_path,
+        const mv::vulkan_device_t &device, const render_pass_t& p_render_pass, std::string_view vertex_shader_path,
         std::string_view fragment_shader_path
     ) -> graphics_pipeline_t;
 
@@ -28,7 +35,29 @@ struct graphics_pipeline_t {
     YES_MOVE(graphics_pipeline_t);
 
     ~graphics_pipeline_t() {
+        vkDestroyPipelineLayout(device.logical, layout, nullptr);
         vkDestroyPipeline(device.logical, pipeline, nullptr);
+    }
+};
+
+struct render_pass_t {
+    VkRenderPass render_pass;
+    const mv::vulkan_device_t &device;
+
+    render_pass_t(
+        VkRenderPass p_render_pass, const mv::vulkan_device_t &p_device
+    )
+        : render_pass(p_render_pass), device(p_device) {}
+
+    NO_COPY(render_pass_t);
+    YES_MOVE(render_pass_t);
+
+    static auto
+    create(const mv::vulkan_device_t &device, const mv::swapchain_t &swapchain)
+        -> render_pass_t;
+
+    ~render_pass_t() {
+        vkDestroyRenderPass(device.logical, render_pass, nullptr);
     }
 };
 
@@ -93,9 +122,28 @@ int main(int p_argc, const char *const *const p_argv) {
 }
 
 auto graphics_pipeline_t::create(
-    const mv::vulkan_device_t &p_device, std::string_view p_vertex_shader_path,
+    const mv::vulkan_device_t &p_device, const render_pass_t& p_render_pass, 
+    std::string_view p_vertex_shader_path, 
     std::string_view p_fragment_shader_path
 ) -> graphics_pipeline_t {
+    const VkPipelineLayoutCreateInfo pipeline_layout_create_info{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 0,
+        .pSetLayouts = nullptr,
+        .pushConstantRangeCount = 0,
+        .pPushConstantRanges = nullptr,
+    };
+
+    VkPipelineLayout pipeline_layout;
+    auto result = vkCreatePipelineLayout(
+        p_device.logical, &pipeline_layout_create_info, nullptr,
+        &pipeline_layout
+    );
+
+    if (result != VK_SUCCESS) {
+        throw mv::vulkan_exception{result};
+    }
+
     const auto vertex_shader_code = read_file_to_vector(p_vertex_shader_path);
     const auto fragment_shader_code =
         read_file_to_vector(p_fragment_shader_path);
@@ -107,7 +155,7 @@ auto graphics_pipeline_t::create(
     };
 
     VkShaderModule vertex_shader_module;
-    auto result = vkCreateShaderModule(
+    result = vkCreateShaderModule(
         p_device.logical, &vertex_shader_module_create_info, nullptr,
         &vertex_shader_module
     );
@@ -211,6 +259,11 @@ auto graphics_pipeline_t::create(
         .pMultisampleState = &multisample_state,
         .pDepthStencilState = nullptr,
         .pColorBlendState = &color_blend_state,
+        .layout = pipeline_layout,
+        .renderPass = p_render_pass.render_pass,
+        .subpass = 0,
+        .basePipelineHandle = VK_NULL_HANDLE,
+        .basePipelineIndex = -1,
     };
 
     VkPipeline pipeline;
@@ -226,7 +279,51 @@ auto graphics_pipeline_t::create(
     vkDestroyShaderModule(p_device.logical, vertex_shader_module, nullptr);
     vkDestroyShaderModule(p_device.logical, fragment_shader_module, nullptr);
 
-    return {pipeline, p_device};
+    return {pipeline, p_render_pass, pipeline_layout, p_device};
+}
+
+auto render_pass_t::create(
+    const mv::vulkan_device_t &p_device, const mv::swapchain_t &p_swapchain
+) -> render_pass_t {
+    const VkAttachmentDescription color_attachment{
+        .format = p_swapchain.format,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    };
+
+    const VkAttachmentReference color_attachment_reference{
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    const VkSubpassDescription subpass{
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment_reference,
+    };
+
+    const VkRenderPassCreateInfo render_pass_create_info{
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .attachmentCount = 1,
+        .pAttachments = &color_attachment,
+        .subpassCount = 1,
+        .pSubpasses = &subpass,
+    };
+
+    VkRenderPass render_pass;
+    const auto result = vkCreateRenderPass(
+        p_device.logical, &render_pass_create_info, nullptr, &render_pass
+    );
+    if (result != VK_SUCCESS) {
+        throw mv::vulkan_exception{result};
+    }
+
+    return {render_pass, p_device};
 }
 
 namespace {
