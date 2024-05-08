@@ -50,6 +50,10 @@ struct swapchain_t {
     YES_MOVE(swapchain_t);
 
     inline ~swapchain_t() {
+        for (auto view : image_views) {
+            vkDestroyImageView(device.logical, view, nullptr);
+        }
+
         vkDestroySwapchainKHR(device.logical, swapchain, nullptr);
     }
 };

@@ -16,18 +16,20 @@ struct graphics_pipeline_t {
     VkPipeline pipeline;
     VkPipelineLayout layout;
 
-    const render_pass_t& render_pass;
+    const render_pass_t &render_pass;
 
     const mv::vulkan_device_t &device;
 
     graphics_pipeline_t(
-        VkPipeline p_pipeline, const render_pass_t& p_render_pass, VkPipelineLayout p_layout,
-        const mv::vulkan_device_t &p_device
+        VkPipeline p_pipeline, const render_pass_t &p_render_pass,
+        VkPipelineLayout p_layout, const mv::vulkan_device_t &p_device
     )
-        : pipeline(p_pipeline),  layout(p_layout), render_pass(p_render_pass), device(p_device) {}
+        : pipeline(p_pipeline), layout(p_layout), render_pass(p_render_pass),
+          device(p_device) {}
 
     static auto create(
-        const mv::vulkan_device_t &device, const render_pass_t& p_render_pass, std::string_view vertex_shader_path,
+        const mv::vulkan_device_t &device, const render_pass_t &p_render_pass,
+        std::string_view vertex_shader_path,
         std::string_view fragment_shader_path
     ) -> graphics_pipeline_t;
 
@@ -94,6 +96,7 @@ int main(int p_argc, const char *const *const p_argv) {
     for (auto arg = p_argv; arg < p_argv + p_argc; ++arg) {
         if (std::strcmp(*arg, "--validation") == 0) {
             enable_validation = true;
+            std::cout << "[INFO]: Enabling validation layers.\n";
         }
     }
 
@@ -107,6 +110,11 @@ int main(int p_argc, const char *const *const p_argv) {
         const auto device =
             mv::vulkan_device_t::create(instance, window.surface);
         const auto swapchain = mv::swapchain_t::create(device, window);
+        const auto render_pass = render_pass_t::create(device, swapchain);
+        const auto pipeline = graphics_pipeline_t::create(
+            device, render_pass, "shaders/basic.vert.spv",
+            "shaders/basic.frag.spv"
+        );
 
         glfwShowWindow(window.window);
         while (!glfwWindowShouldClose(window.window)) {
@@ -122,8 +130,8 @@ int main(int p_argc, const char *const *const p_argv) {
 }
 
 auto graphics_pipeline_t::create(
-    const mv::vulkan_device_t &p_device, const render_pass_t& p_render_pass, 
-    std::string_view p_vertex_shader_path, 
+    const mv::vulkan_device_t &p_device, const render_pass_t &p_render_pass,
+    std::string_view p_vertex_shader_path,
     std::string_view p_fragment_shader_path
 ) -> graphics_pipeline_t {
     const VkPipelineLayoutCreateInfo pipeline_layout_create_info{
@@ -246,6 +254,17 @@ auto graphics_pipeline_t::create(
         .attachmentCount = 1,
         .pAttachments = &color_blend_attachment,
     };
+    
+    const std::array<VkDynamicState, 2> dynamic_states{
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
+    };
+
+    const VkPipelineDynamicStateCreateInfo dynamic_state{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = dynamic_states.size(),
+        .pDynamicStates = dynamic_states.data(),
+    };
 
     const VkGraphicsPipelineCreateInfo pipeline_create_info{
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -259,6 +278,7 @@ auto graphics_pipeline_t::create(
         .pMultisampleState = &multisample_state,
         .pDepthStencilState = nullptr,
         .pColorBlendState = &color_blend_state,
+        .pDynamicState = &dynamic_state,
         .layout = pipeline_layout,
         .renderPass = p_render_pass.render_pass,
         .subpass = 0,
@@ -288,7 +308,7 @@ auto render_pass_t::create(
     const VkAttachmentDescription color_attachment{
         .format = p_swapchain.format,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
