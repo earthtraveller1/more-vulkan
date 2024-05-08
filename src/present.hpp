@@ -29,14 +29,18 @@ struct swapchain_t {
     VkSwapchainKHR swapchain;
     std::vector<VkImage> images;
     std::vector<VkImageView> image_views;
+    VkFormat format;
+    VkExtent2D extent;
+
     const vulkan_device_t &device;
 
     swapchain_t(
         VkSwapchainKHR p_swapchain, const vulkan_device_t &p_device,
         std::vector<VkImage> &&p_images,
-        std::vector<VkImageView> &&p_image_views
+        std::vector<VkImageView> &&p_image_views, VkFormat p_format,
+        VkExtent2D p_extent
     )
-        : swapchain(p_swapchain), images(p_images), image_views(p_image_views),
+        : swapchain(p_swapchain), images(p_images), image_views(p_image_views), format(p_format), extent(p_extent),
           device(p_device) {}
 
     static auto create(const vulkan_device_t &device, const window_t &window)

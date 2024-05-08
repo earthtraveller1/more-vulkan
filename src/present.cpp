@@ -205,5 +205,12 @@ auto mv::swapchain_t::create(
         image_views.push_back(image_view);
     }
 
-    return {swapchain, p_device, std::move(images), std::move(image_views)};
+    return {
+        swapchain,
+        p_device,
+        std::move(images),
+        std::move(image_views),
+        surface_format.format,
+        swap_extent
+    };
 }
