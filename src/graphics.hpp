@@ -65,19 +65,19 @@ struct buffer_t {
     VkDeviceMemory memory;
     VkDeviceSize size;
 
-    enum class type_t { vertex, index, staging } type;
+    enum class type_t { vertex, index, staging };
 
     const mv::vulkan_device_t &device;
 
     buffer_t(
         VkBuffer p_buffer, VkDeviceMemory p_memory, VkDeviceSize p_size,
-        type_t p_type, const mv::vulkan_device_t &p_device
+        const mv::vulkan_device_t &p_device
     )
-        : buffer(p_buffer), memory(p_memory), size(p_size), type(p_type),
-          device(p_device) {}
+        : buffer(p_buffer), memory(p_memory), size(p_size), device(p_device) {}
 
     static auto
-    create(const mv::vulkan_device_t &device, VkDeviceSize size, type_t type) -> buffer_t;
+    create(const mv::vulkan_device_t &device, VkDeviceSize size, type_t type)
+        -> buffer_t;
 
     NO_COPY(buffer_t);
     YES_MOVE(buffer_t);
@@ -85,6 +85,41 @@ struct buffer_t {
     ~buffer_t() {
         vkDestroyBuffer(device.logical, buffer, nullptr);
         vkFreeMemory(device.logical, memory, nullptr);
+    }
+};
+
+struct vertex_buffer_t {
+    buffer_t buffer;
+
+    inline static auto create(const mv::vulkan_device_t &device, size_t size)
+        -> vertex_buffer_t {
+        return vertex_buffer_t{
+            mv::buffer_t::create(device, size, mv::buffer_t::type_t::vertex),
+        };
+    }
+
+    auto bind(VkCommandBuffer command_buffer, VkDeviceSize offset) const
+        -> void {
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &buffer.buffer, &offset);
+    }
+};
+
+struct index_buffer_t {
+    buffer_t buffer;
+
+    inline static auto
+    create(const mv::vulkan_device_t &device, VkDeviceSize size)
+        -> index_buffer_t {
+        return index_buffer_t{
+            mv::buffer_t::create(device, size, mv::buffer_t::type_t::index),
+        };
+    }
+
+    auto bind(
+        VkCommandBuffer command_buffer, VkDeviceSize offset,
+        VkIndexType index_type
+    ) const -> void {
+        vkCmdBindIndexBuffer(command_buffer, buffer.buffer, offset, index_type);
     }
 };
 

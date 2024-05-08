@@ -324,7 +324,7 @@ auto buffer_t::create(
     }
 
     return {
-        buffer, memory, p_size, p_type, p_device
+        buffer, memory, p_size, p_device
     };
 }
 
