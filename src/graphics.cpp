@@ -331,7 +331,7 @@ auto buffer_t::create(
 
 auto buffer_t::copy_from(
     const buffer_t &p_other, VkCommandBuffer p_command_buffer
-) -> void {
+) const -> void {
     // Pick the smallest of the two sizes
     const auto size = std::min(p_other.size, this->size);
 
