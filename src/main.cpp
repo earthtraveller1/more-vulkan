@@ -138,8 +138,8 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const std::array<mv::vertex_t, 3> vertices{
         mv::vertex_t{{0.0f, -0.5f, 0.0f}},
-        mv::vertex_t{{0.5f, 0.5f, 0.0f}},
         mv::vertex_t{{-0.5f, 0.5f, 0.0f}},
+        mv::vertex_t{{0.5f, 0.5f, 0.0f}},
     };
 
     const auto vertex_buffer = mv::vertex_buffer_t::create(
@@ -202,6 +202,30 @@ int main(int p_argc, const char *const *const p_argv) try {
         vkCmdBeginRenderPass(
             command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE
         );
+
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
+
+        const VkViewport viewport{
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = static_cast<float>(swapchain.extent.width),
+            .height = static_cast<float>(swapchain.extent.height),
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f,
+        };
+
+        const VkRect2D scissor{
+            .offset = {0, 0},
+            .extent = swapchain.extent,
+        };
+
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+        vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
+        const VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer.buffer.buffer, &offset);
+
+        vkCmdDraw(command_buffer, 3, 1, 0, 0);
 
         vkCmdEndRenderPass(command_buffer);
         VK_ERROR(vkEndCommandBuffer(command_buffer));
