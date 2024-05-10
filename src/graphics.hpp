@@ -123,6 +123,30 @@ struct index_buffer_t {
     }
 };
 
+struct staging_buffer_t {
+    buffer_t buffer;
+
+    inline static auto
+    create(const mv::vulkan_device_t &device, VkDeviceSize size)
+        -> staging_buffer_t {
+        return staging_buffer_t{
+            mv::buffer_t::create(device, size, mv::buffer_t::type_t::staging),
+        };
+    }
+
+    auto map_memory() -> void * {
+        void *data;
+        vkMapMemory(
+            buffer.device.logical, buffer.memory, 0, buffer.size, 0, &data
+        );
+        return data;
+    }
+
+    auto unmap_memory() -> void {
+        vkUnmapMemory(buffer.device.logical, buffer.memory);
+    }
+};
+
 struct vector_3f_t {
     float x;
     float y;
