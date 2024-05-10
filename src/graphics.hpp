@@ -82,6 +82,8 @@ struct buffer_t {
     NO_COPY(buffer_t);
     YES_MOVE(buffer_t);
 
+    auto copy_from(const buffer_t& other, VkCommandBuffer command_buffer) -> void;
+
     ~buffer_t() {
         vkDestroyBuffer(device.logical, buffer, nullptr);
         vkFreeMemory(device.logical, memory, nullptr);
