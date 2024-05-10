@@ -32,6 +32,9 @@ struct command_pool_t {
         return command_pool_t(pool, p_device);
     }
 
+    NO_COPY(command_pool_t);
+    YES_MOVE(command_pool_t);
+
     auto allocate_buffer() -> VkCommandBuffer {
         VkCommandBufferAllocateInfo alloc_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -49,6 +52,57 @@ struct command_pool_t {
         vkDestroyCommandPool(device.logical, pool, nullptr);
     }
 };
+
+struct vulkan_semaphore_t {
+    VkSemaphore semaphore;
+    const vulkan_device_t &device;
+
+    vulkan_semaphore_t(VkSemaphore p_semaphore, const vulkan_device_t &p_device)
+        : semaphore(p_semaphore), device(p_device) {}
+
+    NO_COPY(vulkan_semaphore_t);
+    YES_MOVE(vulkan_semaphore_t);
+
+    static auto create(const vulkan_device_t &p_device) -> vulkan_semaphore_t {
+        const VkSemaphoreCreateInfo semaphore_info{
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        };
+
+        VkSemaphore semaphore;
+        VK_ERROR(vkCreateSemaphore(p_device.logical, &semaphore_info, nullptr, &semaphore));
+        return vulkan_semaphore_t(semaphore, p_device);
+    }
+
+    ~vulkan_semaphore_t() {
+        vkDestroySemaphore(device.logical, semaphore, nullptr);
+    }
+};
+
+struct vulkan_fence_t {
+    VkFence fence;
+    const vulkan_device_t &device;
+
+    vulkan_fence_t(VkFence p_fence, const vulkan_device_t &p_device)
+        : fence(p_fence), device(p_device) {}
+
+    NO_COPY(vulkan_fence_t);
+    YES_MOVE(vulkan_fence_t);
+
+    static auto create(const vulkan_device_t &p_device) -> vulkan_fence_t {
+        const VkFenceCreateInfo fence_info{
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        };
+
+        VkFence fence;
+        VK_ERROR(vkCreateFence(p_device.logical, &fence_info, nullptr, &fence));
+        return vulkan_fence_t(fence, p_device);
+    }
+
+    ~vulkan_fence_t() {
+        vkDestroyFence(device.logical, fence, nullptr);
+    }
+};
+
 } // namespace
 
 int main(int p_argc, const char *const *const p_argv) try {
