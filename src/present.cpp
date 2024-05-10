@@ -235,6 +235,8 @@ auto mv::swapchain_t::create_framebuffers(const render_pass_t &render_pass
         VK_ERROR(vkCreateFramebuffer(
             device.logical, &create_info, nullptr, &framebuffer
         ));
+
+        framebuffers.push_back(framebuffer);
     }
 
     return { framebuffers, device };
