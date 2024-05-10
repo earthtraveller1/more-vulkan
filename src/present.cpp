@@ -217,7 +217,7 @@ auto mv::swapchain_t::create(
 }
 
 auto mv::swapchain_t::create_framebuffers(const render_pass_t &render_pass
-) const -> std::vector<VkFramebuffer> {
+) const -> mv::swapchain_t::framebuffers_t {
     std::vector<VkFramebuffer> framebuffers;
 
     for (auto view : image_views) {
@@ -237,5 +237,5 @@ auto mv::swapchain_t::create_framebuffers(const render_pass_t &render_pass
         ));
     }
 
-    return framebuffers;
+    return { framebuffers, device };
 }

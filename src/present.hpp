@@ -48,8 +48,19 @@ struct swapchain_t {
     static auto create(const vulkan_device_t &device, const window_t &window)
         -> swapchain_t;
 
+    struct framebuffers_t {
+        std::vector<VkFramebuffer> framebuffers;
+        const vulkan_device_t& device;
+
+        ~framebuffers_t() {
+            for (auto framebuffer : framebuffers) {
+                vkDestroyFramebuffer(device.logical, framebuffer, nullptr);
+            }
+        }
+    };
+
     auto create_framebuffers(const render_pass_t &render_pass) const 
-        -> std::vector<VkFramebuffer>;
+        -> framebuffers_t;
 
     NO_COPY(swapchain_t);
     YES_MOVE(swapchain_t);
