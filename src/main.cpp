@@ -35,7 +35,7 @@ struct command_pool_t {
     NO_COPY(command_pool_t);
     YES_MOVE(command_pool_t);
 
-    auto allocate_buffer() -> VkCommandBuffer {
+    auto allocate_buffer() const -> VkCommandBuffer {
         VkCommandBufferAllocateInfo alloc_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             .commandPool = pool,
@@ -44,7 +44,8 @@ struct command_pool_t {
         };
 
         VkCommandBuffer buffer;
-        VK_ERROR(vkAllocateCommandBuffers(device.logical, &alloc_info, &buffer));
+        VK_ERROR(vkAllocateCommandBuffers(device.logical, &alloc_info, &buffer)
+        );
         return buffer;
     }
 
@@ -69,7 +70,9 @@ struct vulkan_semaphore_t {
         };
 
         VkSemaphore semaphore;
-        VK_ERROR(vkCreateSemaphore(p_device.logical, &semaphore_info, nullptr, &semaphore));
+        VK_ERROR(vkCreateSemaphore(
+            p_device.logical, &semaphore_info, nullptr, &semaphore
+        ));
         return vulkan_semaphore_t(semaphore, p_device);
     }
 
@@ -90,7 +93,8 @@ struct vulkan_fence_t {
 
     static auto create(const vulkan_device_t &p_device) -> vulkan_fence_t {
         const VkFenceCreateInfo fence_info{
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .flags = VK_FENCE_CREATE_SIGNALED_BIT,
         };
 
         VkFence fence;
@@ -129,10 +133,112 @@ int main(int p_argc, const char *const *const p_argv) try {
         device, render_pass, "shaders/basic.vert.spv", "shaders/basic.frag.spv"
     );
 
+    const auto command_pool = command_pool_t::create(device);
+    const auto command_buffer = command_pool.allocate_buffer();
+
+    const std::array<mv::vertex_t, 3> vertices{
+        mv::vertex_t{{0.0f, -0.5f, 0.0f}},
+        mv::vertex_t{{0.5f, 0.5f, 0.0f}},
+        mv::vertex_t{{-0.5f, 0.5f, 0.0f}},
+    };
+
+    const auto vertex_buffer = mv::vertex_buffer_t::create(
+        device, vertices.size() * sizeof(mv::vertex_t)
+    );
+    {
+        auto staging_buffer = mv::staging_buffer_t::create(
+            device, vertices.size() * sizeof(mv::vertex_t)
+        );
+        const auto data = staging_buffer.map_memory();
+        std::memcpy(
+            data, vertices.data(), vertices.size() * sizeof(mv::vertex_t)
+        );
+        vertex_buffer.buffer.copy_from(staging_buffer.buffer, command_pool.pool);
+        vkQueueWaitIdle(device.graphics_queue);
+    }
+
+    const auto frame_fence = vulkan_fence_t::create(device);
+    const auto image_available_semaphore = vulkan_semaphore_t::create(device);
+    const auto render_done_semaphore = vulkan_semaphore_t::create(device);
+
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
+        vkWaitForFences(
+            device.logical, 1, &frame_fence.fence, VK_TRUE, UINT64_MAX
+        );
+        vkResetFences(device.logical, 1, &frame_fence.fence);
+
+        uint32_t image_index;
+        VK_ERROR(vkAcquireNextImageKHR(
+            device.logical, swapchain.swapchain, UINT64_MAX,
+            image_available_semaphore.semaphore, VK_NULL_HANDLE, &image_index
+        ));
+
+        vkResetCommandBuffer(command_buffer, 0);
+
+        const VkCommandBufferBeginInfo begin_info{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        };
+
+        VK_ERROR(vkBeginCommandBuffer(command_buffer, &begin_info));
+
+        const VkClearValue clear_color{
+            .color = {.float32 = {0.0f, 0.01f, 0.01f, 1.0f}}
+        };
+
+        const VkRenderPassBeginInfo render_pass_begin_info{
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .renderPass = render_pass.render_pass,
+            .framebuffer = framebuffers.framebuffers.at(image_index),
+            .renderArea =
+                {
+                    .offset = {0, 0},
+                    .extent = swapchain.extent,
+                },
+            .clearValueCount = 1,
+            .pClearValues = &clear_color,
+        };
+
+        vkCmdBeginRenderPass(
+            command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE
+        );
+
+        vkCmdEndRenderPass(command_buffer);
+        VK_ERROR(vkEndCommandBuffer(command_buffer));
+
+        const VkPipelineStageFlags wait_stage =
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+        const VkSubmitInfo submit_info{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &image_available_semaphore.semaphore,
+            .pWaitDstStageMask = &wait_stage,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &command_buffer,
+            .signalSemaphoreCount = 1,
+            .pSignalSemaphores = &render_done_semaphore.semaphore,
+        };
+
+        VK_ERROR(vkQueueSubmit(
+            device.graphics_queue, 1, &submit_info, frame_fence.fence
+        ));
+
+        const VkPresentInfoKHR present_info{
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &render_done_semaphore.semaphore,
+            .swapchainCount = 1,
+            .pSwapchains = &swapchain.swapchain,
+            .pImageIndices = &image_index,
+        };
+
+        VK_ERROR(vkQueuePresentKHR(device.present_queue, &present_info));
+
         glfwPollEvents();
     }
+
+    vkDeviceWaitIdle(device.logical);
 } catch (const mv::vulkan_exception &e) {
     std::cerr << "[ERROR]: Vulkan error " << e.error_code << '\n';
     return EXIT_FAILURE;
