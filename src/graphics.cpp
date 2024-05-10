@@ -326,14 +326,27 @@ auto buffer_t::create(
         throw vulkan_exception{result};
     }
 
+    vkBindBufferMemory(p_device.logical, buffer, memory, 0);
+
     return {buffer, memory, p_size, p_device};
 }
 
-auto buffer_t::copy_from(
-    const buffer_t &p_other, VkCommandBuffer p_command_buffer
-) const -> void {
+auto buffer_t::copy_from(const buffer_t &p_other, VkCommandPool p_command_pool)
+    const -> void {
     // Pick the smallest of the two sizes
     const auto size = std::min(p_other.size, this->size);
+
+    const VkCommandBufferAllocateInfo command_buffer_allocate_info{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = p_command_pool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+
+    VkCommandBuffer p_command_buffer;
+    VK_ERROR(vkAllocateCommandBuffers(
+        device.logical, &command_buffer_allocate_info, &p_command_buffer
+    ));
 
     const VkCommandBufferBeginInfo begin_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
