@@ -8,6 +8,8 @@
 
 namespace mv {
 
+struct render_pass_t;
+
 struct window_t {
     GLFWwindow *window;
     VkSurfaceKHR surface;
@@ -40,11 +42,14 @@ struct swapchain_t {
         std::vector<VkImageView> &&p_image_views, VkFormat p_format,
         VkExtent2D p_extent
     )
-        : swapchain(p_swapchain), images(p_images), image_views(p_image_views), format(p_format), extent(p_extent),
-          device(p_device) {}
+        : swapchain(p_swapchain), images(p_images), image_views(p_image_views),
+          format(p_format), extent(p_extent), device(p_device) {}
 
     static auto create(const vulkan_device_t &device, const window_t &window)
         -> swapchain_t;
+
+    auto create_framebuffers(const render_pass_t &render_pass) const 
+        -> std::vector<VkFramebuffer>;
 
     NO_COPY(swapchain_t);
     YES_MOVE(swapchain_t);

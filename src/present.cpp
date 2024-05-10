@@ -4,6 +4,7 @@
 
 #include "device.hpp"
 #include "errors.hpp"
+#include "graphics.hpp"
 
 #include "present.hpp"
 
@@ -213,4 +214,28 @@ auto mv::swapchain_t::create(
         surface_format.format,
         swap_extent
     };
+}
+
+auto mv::swapchain_t::create_framebuffers(const render_pass_t &render_pass
+) const -> std::vector<VkFramebuffer> {
+    std::vector<VkFramebuffer> framebuffers;
+
+    for (auto view : image_views) {
+        const VkFramebufferCreateInfo create_info{
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .renderPass = render_pass.render_pass,
+            .attachmentCount = 1,
+            .pAttachments = &view,
+            .width = extent.width,
+            .height = extent.height,
+            .layers = 1,
+        };
+
+        VkFramebuffer framebuffer;
+        VK_ERROR(vkCreateFramebuffer(
+            device.logical, &create_info, nullptr, &framebuffer
+        ));
+    }
+
+    return framebuffers;
 }

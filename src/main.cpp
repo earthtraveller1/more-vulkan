@@ -27,6 +27,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto device = mv::vulkan_device_t::create(instance, window.surface);
     const auto swapchain = mv::swapchain_t::create(device, window);
     const auto render_pass = mv::render_pass_t::create(device, swapchain);
+    const auto framebuffers = swapchain.create_framebuffers(render_pass);
     const auto pipeline = mv::graphics_pipeline_t::create(
         device, render_pass, "shaders/basic.vert.spv", "shaders/basic.frag.spv"
     );
