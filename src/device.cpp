@@ -218,5 +218,8 @@ auto vulkan_device_t::create(VkInstance p_instance, VkSurfaceKHR p_surface)
         throw vulkan_exception{result};
     }
 
+    vkGetDeviceQueue(device.logical, device.graphics_family, 0, &device.graphics_queue);
+    vkGetDeviceQueue(device.logical, device.present_family, 0, &device.present_queue);
+
     return device;
 }
