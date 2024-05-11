@@ -248,16 +248,22 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto command_pool = command_pool_t::create(device);
     const auto command_buffer = command_pool.allocate_buffer();
 
-    const std::array<mv::vertex_t, 4> vertices{
-        mv::vertex_t{{0.5f, 1.0f, 0.5f}},
-        mv::vertex_t{{0.5f, 1.0f, -0.5f}},
-        mv::vertex_t{{-0.5f, 1.0f, -0.5f}},
-        mv::vertex_t{{-0.5f, 1.0f, 0.5f}},
+    const std::array<mv::vertex_t, 8> vertices{
+        mv::vertex_t{{0.5f, 0.5f, 0.5f}},
+        mv::vertex_t{{0.5f, 0.5f, -0.5f}},
+        mv::vertex_t{{-0.5f, 0.5f, -0.5f}},
+        mv::vertex_t{{-0.5f, 0.5f, 0.5f}},
+
+        mv::vertex_t{{0.5f, 0.5f, -0.5f}},
+        mv::vertex_t{{0.5f, -0.5f, -0.5f}},
+        mv::vertex_t{{-0.5f, -0.5f, -0.5f}},
+        mv::vertex_t{{-0.5f, 0.5f, -0.5f}},
     };
 
     const auto vertex_buffer = mv::vertex_buffer_t::create(
         device, vertices.size() * sizeof(mv::vertex_t)
     );
+
     {
         auto staging_buffer = mv::staging_buffer_t::create(
             device, vertices.size() * sizeof(mv::vertex_t)
@@ -273,7 +279,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         vkQueueWaitIdle(device.graphics_queue);
     }
 
-    const std::array<uint16_t, 6> indices{0, 1, 2, 0, 2, 3};
+    const std::array<uint16_t, 12> indices{0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7};
 
     const auto index_buffer =
         mv::index_buffer_t::create(device, indices.size() * sizeof(uint16_t));
