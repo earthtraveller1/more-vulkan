@@ -328,8 +328,19 @@ int main(int p_argc, const char *const *const p_argv) try {
         .model = glm::mat4(1.0f)
     };
 
+    double delta_time = 0.0;
+
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
+        const auto start_time = glfwGetTime();
+
+        if (glfwGetKey(window.window, GLFW_KEY_W)) {
+            ubo.view = glm::translate(ubo.view, glm::vec3(0.0, 0.0, 5.0 * delta_time));
+        }
+        if (glfwGetKey(window.window, GLFW_KEY_S)) {
+            ubo.view = glm::translate(ubo.view, glm::vec3(0.0, 0.0, -5.0 * delta_time));
+        }
+
         vkWaitForFences(
             device.logical, 1, &frame_fence.fence, VK_TRUE, UINT64_MAX
         );
@@ -454,6 +465,9 @@ int main(int p_argc, const char *const *const p_argv) try {
         VK_ERROR(vkQueuePresentKHR(device.present_queue, &present_info));
 
         glfwPollEvents();
+
+        const auto end_time = glfwGetTime();
+        delta_time = end_time - start_time;
     }
 
     vkDeviceWaitIdle(device.logical);
