@@ -187,7 +187,7 @@ struct uniform_buffer_t {
         };
     }
 
-    auto map_memory() -> void * {
+    auto map_memory() const -> void * {
         void *data;
         vkMapMemory(
             buffer.device.logical, buffer.memory, 0, buffer.size, 0, &data
@@ -195,7 +195,7 @@ struct uniform_buffer_t {
         return data;
     }
 
-    auto unmap_memory() -> void {
+    auto unmap_memory() const -> void {
         vkUnmapMemory(buffer.device.logical, buffer.memory);
     }
 };

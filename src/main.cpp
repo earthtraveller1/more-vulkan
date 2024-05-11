@@ -1,6 +1,7 @@
-#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "device.hpp"
 #include "enumerate.hpp"
@@ -308,7 +309,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     {
         const auto buffer_info = uniform_buffer.get_descriptor_buffer_info();
 
-        VkWriteDescriptorSet set_write {
+        VkWriteDescriptorSet set_write{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = descriptor_set,
             .dstBinding = 0,
@@ -320,6 +321,12 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         vkUpdateDescriptorSets(device.logical, 1, &set_write, 0, nullptr);
     }
+
+    uniform_buffer_object_t ubo{
+        .projection = glm::perspective(45.0f, 1280.0f / 720.0f, 0.1f, 100.0f),
+        .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)),
+        .model = glm::mat4(1.0f)
+    };
 
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
@@ -365,6 +372,15 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         vkCmdBindPipeline(
             command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline
+        );
+
+        const auto data = uniform_buffer.map_memory();
+        memcpy(data, &ubo, sizeof ubo);
+        uniform_buffer.unmap_memory();
+
+        vkCmdBindDescriptorSets(
+            command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0,
+            1, &descriptor_set, 0, nullptr
         );
 
         const VkViewport viewport{
