@@ -160,8 +160,8 @@ struct uniform_buffer_t {
 
     inline static auto
     create(const mv::vulkan_device_t &device, VkDeviceSize size)
-        -> staging_buffer_t {
-        return staging_buffer_t{
+        -> uniform_buffer_t {
+        return uniform_buffer_t{
             mv::buffer_t::create(device, size, mv::buffer_t::type_t::uniform),
         };
     }
@@ -176,6 +176,14 @@ struct uniform_buffer_t {
             .descriptorCount = descriptor_count,
             .stageFlags = stage_flags,
             .pImmutableSamplers = nullptr,
+        };
+    }
+
+    inline auto get_descriptor_buffer_info() const -> VkDescriptorBufferInfo {
+        return {
+            .buffer = buffer.buffer,
+            .offset = 0,
+            .range = buffer.size,
         };
     }
 

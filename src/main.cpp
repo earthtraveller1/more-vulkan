@@ -192,6 +192,12 @@ struct descriptor_pool_t {
     }
 };
 
+struct uniform_buffer_object_t {
+    glm::mat4 projection;
+    glm::mat4 view;
+    glm::mat4 model;
+};
+
 } // namespace
 
 int main(int p_argc, const char *const *const p_argv) try {
@@ -281,6 +287,9 @@ int main(int p_argc, const char *const *const p_argv) try {
         vkQueueWaitIdle(device.graphics_queue);
     }
 
+    const auto uniform_buffer =
+        mv::uniform_buffer_t::create(device, sizeof(uniform_buffer_object_t));
+
     const auto frame_fence = vulkan_fence_t::create(device);
     const auto image_available_semaphore = vulkan_semaphore_t::create(device);
     const auto render_done_semaphore = vulkan_semaphore_t::create(device);
@@ -291,6 +300,26 @@ int main(int p_argc, const char *const *const p_argv) try {
                     .descriptorCount = 1,
                 }}
     );
+
+    const auto descriptor_set =
+        descriptor_pool.allocate_descriptor_set(uniform_buffer_descriptor_layout
+        );
+
+    {
+        const auto buffer_info = uniform_buffer.get_descriptor_buffer_info();
+
+        VkWriteDescriptorSet set_write {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptor_set,
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &buffer_info,
+        };
+
+        vkUpdateDescriptorSets(device.logical, 1, &set_write, 0, nullptr);
+    }
 
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
