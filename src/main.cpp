@@ -111,6 +111,87 @@ struct push_constants_t {
     float t;
 };
 
+struct descriptor_set_layout_t {
+    VkDescriptorSetLayout layout;
+    const vulkan_device_t &device;
+
+    descriptor_set_layout_t(
+        VkDescriptorSetLayout p_layout, const vulkan_device_t &p_device
+    )
+        : layout(p_layout), device(p_device) {}
+
+    NO_COPY(descriptor_set_layout_t);
+    YES_MOVE(descriptor_set_layout_t);
+
+    static auto create(
+        const vulkan_device_t &p_device,
+        std::span<const VkDescriptorSetLayoutBinding> bindings
+    ) -> descriptor_set_layout_t {
+        const VkDescriptorSetLayoutCreateInfo layout_info{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .bindingCount = static_cast<uint32_t>(bindings.size()),
+            .pBindings = bindings.data(),
+        };
+
+        VkDescriptorSetLayout layout;
+        VK_ERROR(vkCreateDescriptorSetLayout(
+            p_device.logical, &layout_info, nullptr, &layout
+        ));
+        return descriptor_set_layout_t{layout, p_device};
+    }
+
+    ~descriptor_set_layout_t() {
+        vkDestroyDescriptorSetLayout(device.logical, layout, nullptr);
+    }
+};
+
+struct descriptor_pool_t {
+    VkDescriptorPool pool;
+    const vulkan_device_t &device;
+
+    descriptor_pool_t(VkDescriptorPool p_pool, const vulkan_device_t &p_device)
+        : pool(p_pool), device(p_device) {}
+
+    static auto create(
+        const vulkan_device_t &p_device,
+        std::span<const VkDescriptorPoolSize> pool_sizes
+    ) -> descriptor_pool_t {
+        const VkDescriptorPoolCreateInfo pool_info{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .maxSets = 1,
+            .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
+            .pPoolSizes = pool_sizes.data(),
+        };
+
+        VkDescriptorPool pool;
+        VK_ERROR(
+            vkCreateDescriptorPool(p_device.logical, &pool_info, nullptr, &pool)
+        );
+        return descriptor_pool_t{pool, p_device};
+    }
+
+    auto allocate_descriptor_set(const descriptor_set_layout_t &layout) const
+        -> VkDescriptorSet {
+        VkDescriptorSetAllocateInfo alloc_info{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorPool = pool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &layout.layout,
+        };
+
+        VkDescriptorSet set;
+        VK_ERROR(vkAllocateDescriptorSets(device.logical, &alloc_info, &set));
+        return set;
+    }
+
+    NO_COPY(descriptor_pool_t);
+    YES_MOVE(descriptor_pool_t);
+
+    ~descriptor_pool_t() {
+        vkDestroyDescriptorPool(device.logical, pool, nullptr);
+    }
+};
+
 } // namespace
 
 int main(int p_argc, const char *const *const p_argv) try {
@@ -133,13 +214,27 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto swapchain = mv::swapchain_t::create(device, window);
     const auto render_pass = mv::render_pass_t::create(device, swapchain);
     const auto framebuffers = swapchain.create_framebuffers(render_pass);
+
+    const auto uniform_buffer_descriptor_layout =
+        descriptor_set_layout_t::create(
+            device,
+            std::array<VkDescriptorSetLayoutBinding, 1>{
+                mv::uniform_buffer_t::get_set_layout_binding(
+                    0, 1, VK_SHADER_STAGE_VERTEX_BIT
+                ),
+            }
+        );
+
     const auto pipeline = mv::graphics_pipeline_t::create(
         device, render_pass, "shaders/basic.vert.spv", "shaders/basic.frag.spv",
         std::array<VkPushConstantRange, 1>{VkPushConstantRange{
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(push_constants_t),
-        }}
+        }},
+        std::array<VkDescriptorSetLayout, 1>{
+            uniform_buffer_descriptor_layout.layout,
+        }
     );
 
     const auto command_pool = command_pool_t::create(device);
@@ -189,6 +284,13 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto frame_fence = vulkan_fence_t::create(device);
     const auto image_available_semaphore = vulkan_semaphore_t::create(device);
     const auto render_done_semaphore = vulkan_semaphore_t::create(device);
+
+    const auto descriptor_pool = descriptor_pool_t::create(
+        device, std::array<VkDescriptorPoolSize, 1>{VkDescriptorPoolSize{
+                    .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    .descriptorCount = 1,
+                }}
+    );
 
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
