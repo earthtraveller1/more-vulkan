@@ -136,10 +136,11 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto command_pool = command_pool_t::create(device);
     const auto command_buffer = command_pool.allocate_buffer();
 
-    const std::array<mv::vertex_t, 3> vertices{
-        mv::vertex_t{{0.0f, -0.5f, 0.0f}},
+    const std::array<mv::vertex_t, 4> vertices{
+        mv::vertex_t{{-0.5f, -0.5f, 0.0f}},
         mv::vertex_t{{-0.5f, 0.5f, 0.0f}},
         mv::vertex_t{{0.5f, 0.5f, 0.0f}},
+        mv::vertex_t{{0.5f, -0.5f, 0.0f}},
     };
 
     const auto vertex_buffer = mv::vertex_buffer_t::create(
@@ -153,7 +154,26 @@ int main(int p_argc, const char *const *const p_argv) try {
         std::memcpy(
             data, vertices.data(), vertices.size() * sizeof(mv::vertex_t)
         );
-        vertex_buffer.buffer.copy_from(staging_buffer.buffer, command_pool.pool);
+        staging_buffer.unmap_memory();
+        vertex_buffer.buffer.copy_from(
+            staging_buffer.buffer, command_pool.pool
+        );
+        vkQueueWaitIdle(device.graphics_queue);
+    }
+
+    const std::array<uint16_t, 6> indices{0, 1, 2, 0, 2, 3};
+
+    const auto index_buffer =
+        mv::index_buffer_t::create(device, indices.size() * sizeof(uint16_t));
+
+    {
+        auto staging_buffer = mv::staging_buffer_t::create(
+            device, indices.size() * sizeof(uint16_t)
+        );
+        const auto data = staging_buffer.map_memory();
+        std::memcpy(data, indices.data(), indices.size() * sizeof(uint16_t));
+        staging_buffer.unmap_memory();
+        index_buffer.buffer.copy_from(staging_buffer.buffer, command_pool.pool);
         vkQueueWaitIdle(device.graphics_queue);
     }
 
@@ -203,7 +223,9 @@ int main(int p_argc, const char *const *const p_argv) try {
             command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE
         );
 
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
+        vkCmdBindPipeline(
+            command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline
+        );
 
         const VkViewport viewport{
             .x = 0.0f,
@@ -223,9 +245,16 @@ int main(int p_argc, const char *const *const p_argv) try {
         vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
         const VkDeviceSize offset = 0;
-        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer.buffer.buffer, &offset);
+        vkCmdBindVertexBuffers(
+            command_buffer, 0, 1, &vertex_buffer.buffer.buffer, &offset
+        );
 
-        vkCmdDraw(command_buffer, 3, 1, 0, 0);
+        vkCmdBindIndexBuffer(
+            command_buffer, index_buffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT16
+        );
+
+        // vkCmdDraw(command_buffer, 3, 1, 0, 0);
+        vkCmdDrawIndexed(command_buffer, indices.size(), 1, 0, 0, 1);
 
         vkCmdEndRenderPass(command_buffer);
         VK_ERROR(vkEndCommandBuffer(command_buffer));
