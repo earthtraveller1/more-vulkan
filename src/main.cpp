@@ -107,6 +107,10 @@ struct vulkan_fence_t {
     }
 };
 
+struct push_constants_t {
+    float t;
+};
+
 } // namespace
 
 int main(int p_argc, const char *const *const p_argv) try {
@@ -130,7 +134,12 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto render_pass = mv::render_pass_t::create(device, swapchain);
     const auto framebuffers = swapchain.create_framebuffers(render_pass);
     const auto pipeline = mv::graphics_pipeline_t::create(
-        device, render_pass, "shaders/basic.vert.spv", "shaders/basic.frag.spv"
+        device, render_pass, "shaders/basic.vert.spv", "shaders/basic.frag.spv",
+        std::array<VkPushConstantRange, 1>{VkPushConstantRange{
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .offset = 0,
+            .size = sizeof(push_constants_t),
+        }}
     );
 
     const auto command_pool = command_pool_t::create(device);
@@ -251,6 +260,15 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         vkCmdBindIndexBuffer(
             command_buffer, index_buffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT16
+        );
+
+        const push_constants_t push_constants{
+            .t = static_cast<float>(glfwGetTime()),
+        };
+
+        vkCmdPushConstants(
+            command_buffer, pipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+            sizeof(push_constants_t), &push_constants
         );
 
         // vkCmdDraw(command_buffer, 3, 1, 0, 0);
