@@ -62,12 +62,74 @@ struct push_constants_t {
     float t;
 };
 
-
 struct uniform_buffer_object_t {
     glm::mat4 projection;
     glm::mat4 view;
     glm::mat4 model;
 };
+
+enum class axis_t { x, y, z };
+
+auto append_cube_face_to_mesh(
+    axis_t p_axis, bool p_negate, bool p_backface,
+    std::vector<mv::vertex_t> &p_vertices, std::vector<uint32_t> &p_indices
+) -> void {
+    const float values[][2]{
+        {0.5f, -0.5f},
+        {0.5f, 0.5f},
+        {-0.5f, 0.5f},
+        {-0.5f, -0.5f},
+    };
+
+    const float third_value = p_negate ? -0.5f : 0.5f;
+
+    const std::array indices{0, 1, 2, 0, 2, 3};
+
+    const auto pivot_index = static_cast<uint16_t>(p_vertices.size());
+
+    for (int i = 0; i < 4; i++) {
+        float x_value, y_value, z_value;
+
+        switch (p_axis) {
+        case axis_t::x:
+            z_value = -values[i][0];
+            y_value = values[i][1];
+            x_value = third_value;
+
+            if (p_backface) {
+                y_value = -y_value;
+            }
+
+            break;
+        case axis_t::y:
+            x_value = values[i][0];
+            z_value = -values[i][1];
+            y_value = third_value;
+
+            if (p_backface) {
+                z_value = -z_value;
+            }
+
+            break;
+        case axis_t::z:
+            x_value = values[i][0];
+            y_value = values[i][1];
+            z_value = third_value;
+
+            if (p_backface) {
+                x_value = -x_value;
+            }
+        }
+
+        p_vertices.push_back({
+            .position = {x_value, y_value, z_value},
+        });
+    }
+
+    for (auto index : indices) {
+        p_indices.push_back(pivot_index + index);
+    }
+}
 
 } // namespace
 
@@ -117,17 +179,15 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto command_pool = command_pool_t::create(device);
     const auto command_buffer = command_pool.allocate_buffer();
 
-    const std::array<mv::vertex_t, 8> vertices{
-        mv::vertex_t{{0.5f, 0.5f, 0.5f}},
-        mv::vertex_t{{0.5f, 0.5f, -0.5f}},
-        mv::vertex_t{{-0.5f, 0.5f, -0.5f}},
-        mv::vertex_t{{-0.5f, 0.5f, 0.5f}},
+    std::vector<mv::vertex_t> vertices;
+    std::vector<uint32_t> indices;
 
-        mv::vertex_t{{0.5f, 0.5f, -0.5f}},
-        mv::vertex_t{{0.5f, -0.5f, -0.5f}},
-        mv::vertex_t{{-0.5f, -0.5f, -0.5f}},
-        mv::vertex_t{{-0.5f, 0.5f, -0.5f}},
-    };
+    append_cube_face_to_mesh(axis_t::z, false, false, vertices, indices);
+    append_cube_face_to_mesh(axis_t::z, true, true, vertices, indices);
+    append_cube_face_to_mesh(axis_t::x, false, false, vertices, indices);
+    append_cube_face_to_mesh(axis_t::x, true, true, vertices, indices);
+    append_cube_face_to_mesh(axis_t::y, false, false, vertices, indices);
+    append_cube_face_to_mesh(axis_t::y, true, true, vertices, indices);
 
     const auto vertex_buffer = mv::vertex_buffer_t::create(
         device, vertices.size() * sizeof(mv::vertex_t)
@@ -148,17 +208,15 @@ int main(int p_argc, const char *const *const p_argv) try {
         vkQueueWaitIdle(device.graphics_queue);
     }
 
-    const std::array<uint16_t, 12> indices{0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7};
-
     const auto index_buffer =
-        mv::index_buffer_t::create(device, indices.size() * sizeof(uint16_t));
+        mv::index_buffer_t::create(device, indices.size() * sizeof(uint32_t));
 
     {
         auto staging_buffer = mv::staging_buffer_t::create(
-            device, indices.size() * sizeof(uint16_t)
+            device, indices.size() * sizeof(uint32_t)
         );
         const auto data = staging_buffer.map_memory();
-        std::memcpy(data, indices.data(), indices.size() * sizeof(uint16_t));
+        std::memcpy(data, indices.data(), indices.size() * sizeof(uint32_t));
         staging_buffer.unmap_memory();
         index_buffer.buffer.copy_from(staging_buffer.buffer, command_pool.pool);
         vkQueueWaitIdle(device.graphics_queue);
@@ -205,6 +263,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     };
 
     double delta_time = 0.0;
+    double time = 0.0;
 
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
@@ -218,6 +277,14 @@ int main(int p_argc, const char *const *const p_argv) try {
             ubo.view = glm::translate(
                 ubo.view, glm::vec3(0.0, 0.0, -5.0 * delta_time)
             );
+        }
+
+        if (glfwGetKey(window.window, GLFW_KEY_R)) {
+            ubo.model = glm::rotate(
+                glm::mat4(1.0f), static_cast<float>(time),
+                glm::vec3(0.0f, 1.0f, 0.5f)
+            );
+            time += delta_time;
         }
 
         vkWaitForFences(
@@ -296,7 +363,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         );
 
         vkCmdBindIndexBuffer(
-            command_buffer, index_buffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT16
+            command_buffer, index_buffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT32
         );
 
         const push_constants_t push_constants{
