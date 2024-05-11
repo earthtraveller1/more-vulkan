@@ -18,12 +18,14 @@ auto graphics_pipeline_t::create(
     const mv::vulkan_device_t &p_device, const render_pass_t &p_render_pass,
     std::string_view p_vertex_shader_path,
     std::string_view p_fragment_shader_path,
-    std::span<const VkPushConstantRange> push_constant_ranges
+    std::span<const VkPushConstantRange> push_constant_ranges,
+    std::span<const VkDescriptorSetLayout> p_descriptor_set_layouts
 ) -> graphics_pipeline_t {
     const VkPipelineLayoutCreateInfo pipeline_layout_create_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 0,
-        .pSetLayouts = nullptr,
+        .setLayoutCount =
+            static_cast<uint32_t>(p_descriptor_set_layouts.size()),
+        .pSetLayouts = p_descriptor_set_layouts.data(),
         .pushConstantRangeCount =
             static_cast<uint32_t>(push_constant_ranges.size()),
         .pPushConstantRanges = push_constant_ranges.data(),
@@ -256,6 +258,10 @@ auto buffer_t::create(
                     return static_cast<VkBufferUsageFlags>(
                         VK_BUFFER_USAGE_TRANSFER_SRC_BIT
                     );
+                case type_t::uniform:
+                    return static_cast<VkBufferUsageFlags>(
+                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+                    );
                 }
             }(),
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -288,6 +294,11 @@ auto buffer_t::create(
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
             );
         case type_t::staging:
+            return static_cast<VkMemoryPropertyFlags>(
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            );
+        case type_t::uniform:
             return static_cast<VkMemoryPropertyFlags>(
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT

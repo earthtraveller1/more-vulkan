@@ -2,8 +2,8 @@
 
 #include <span>
 
-#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
+#include <vulkan/vulkan.h>
 
 #include "common.hpp"
 #include "device.hpp"
@@ -30,7 +30,9 @@ struct graphics_pipeline_t {
     static auto create(
         const mv::vulkan_device_t &device, const render_pass_t &p_render_pass,
         std::string_view vertex_shader_path,
-        std::string_view fragment_shader_path, std::span<const VkPushConstantRange> push_constant_ranges
+        std::string_view fragment_shader_path,
+        std::span<const VkPushConstantRange> push_constant_ranges,
+        std::span<const VkDescriptorSetLayout> descriptor_set_layouts
     ) -> graphics_pipeline_t;
 
     NO_COPY(graphics_pipeline_t);
@@ -68,7 +70,7 @@ struct buffer_t {
     VkDeviceMemory memory;
     VkDeviceSize size;
 
-    enum class type_t { vertex, index, staging };
+    enum class type_t { vertex, index, staging, uniform };
 
     const mv::vulkan_device_t &device;
 
@@ -85,7 +87,8 @@ struct buffer_t {
     NO_COPY(buffer_t);
     YES_MOVE(buffer_t);
 
-    auto copy_from(const buffer_t& other, VkCommandPool command_buffer) const -> void;
+    auto copy_from(const buffer_t &other, VkCommandPool command_buffer) const
+        -> void;
 
     ~buffer_t() {
         vkDestroyBuffer(device.logical, buffer, nullptr);
@@ -152,6 +155,42 @@ struct staging_buffer_t {
     }
 };
 
+struct uniform_buffer_t {
+    buffer_t buffer;
+
+    inline static auto
+    create(const mv::vulkan_device_t &device, VkDeviceSize size)
+        -> staging_buffer_t {
+        return staging_buffer_t{
+            mv::buffer_t::create(device, size, mv::buffer_t::type_t::uniform),
+        };
+    }
+
+    inline static auto get_set_layout_binding(
+        uint32_t binding, uint32_t descriptor_count,
+        VkShaderStageFlags stage_flags
+    ) -> VkDescriptorSetLayoutBinding {
+        return {
+            .binding = binding,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = descriptor_count,
+            .stageFlags = stage_flags,
+            .pImmutableSamplers = nullptr,
+        };
+    }
+
+    auto map_memory() -> void * {
+        void *data;
+        vkMapMemory(
+            buffer.device.logical, buffer.memory, 0, buffer.size, 0, &data
+        );
+        return data;
+    }
+
+    auto unmap_memory() -> void {
+        vkUnmapMemory(buffer.device.logical, buffer.memory);
+    }
+};
 struct vertex_t {
     glm::vec3 position;
 };
