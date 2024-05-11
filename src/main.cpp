@@ -8,8 +8,11 @@
 #include "errors.hpp"
 #include "graphics.hpp"
 #include "present.hpp"
+#include "sync.hpp"
 
 using mv::vulkan_device_t;
+using mv::vulkan_fence_t;
+using mv::vulkan_semaphore_t;
 
 namespace {
 struct command_pool_t {
@@ -55,142 +58,8 @@ struct command_pool_t {
     }
 };
 
-struct vulkan_semaphore_t {
-    VkSemaphore semaphore;
-    const vulkan_device_t &device;
-
-    vulkan_semaphore_t(VkSemaphore p_semaphore, const vulkan_device_t &p_device)
-        : semaphore(p_semaphore), device(p_device) {}
-
-    NO_COPY(vulkan_semaphore_t);
-    YES_MOVE(vulkan_semaphore_t);
-
-    static auto create(const vulkan_device_t &p_device) -> vulkan_semaphore_t {
-        const VkSemaphoreCreateInfo semaphore_info{
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        };
-
-        VkSemaphore semaphore;
-        VK_ERROR(vkCreateSemaphore(
-            p_device.logical, &semaphore_info, nullptr, &semaphore
-        ));
-        return vulkan_semaphore_t(semaphore, p_device);
-    }
-
-    ~vulkan_semaphore_t() {
-        vkDestroySemaphore(device.logical, semaphore, nullptr);
-    }
-};
-
-struct vulkan_fence_t {
-    VkFence fence;
-    const vulkan_device_t &device;
-
-    vulkan_fence_t(VkFence p_fence, const vulkan_device_t &p_device)
-        : fence(p_fence), device(p_device) {}
-
-    NO_COPY(vulkan_fence_t);
-    YES_MOVE(vulkan_fence_t);
-
-    static auto create(const vulkan_device_t &p_device) -> vulkan_fence_t {
-        const VkFenceCreateInfo fence_info{
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-        };
-
-        VkFence fence;
-        VK_ERROR(vkCreateFence(p_device.logical, &fence_info, nullptr, &fence));
-        return vulkan_fence_t(fence, p_device);
-    }
-
-    ~vulkan_fence_t() {
-        vkDestroyFence(device.logical, fence, nullptr);
-    }
-};
-
 struct push_constants_t {
     float t;
-};
-
-struct descriptor_set_layout_t {
-    VkDescriptorSetLayout layout;
-    const vulkan_device_t &device;
-
-    descriptor_set_layout_t(
-        VkDescriptorSetLayout p_layout, const vulkan_device_t &p_device
-    )
-        : layout(p_layout), device(p_device) {}
-
-    NO_COPY(descriptor_set_layout_t);
-    YES_MOVE(descriptor_set_layout_t);
-
-    static auto create(
-        const vulkan_device_t &p_device,
-        std::span<const VkDescriptorSetLayoutBinding> bindings
-    ) -> descriptor_set_layout_t {
-        const VkDescriptorSetLayoutCreateInfo layout_info{
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .bindingCount = static_cast<uint32_t>(bindings.size()),
-            .pBindings = bindings.data(),
-        };
-
-        VkDescriptorSetLayout layout;
-        VK_ERROR(vkCreateDescriptorSetLayout(
-            p_device.logical, &layout_info, nullptr, &layout
-        ));
-        return descriptor_set_layout_t{layout, p_device};
-    }
-
-    ~descriptor_set_layout_t() {
-        vkDestroyDescriptorSetLayout(device.logical, layout, nullptr);
-    }
-};
-
-struct descriptor_pool_t {
-    VkDescriptorPool pool;
-    const vulkan_device_t &device;
-
-    descriptor_pool_t(VkDescriptorPool p_pool, const vulkan_device_t &p_device)
-        : pool(p_pool), device(p_device) {}
-
-    static auto create(
-        const vulkan_device_t &p_device,
-        std::span<const VkDescriptorPoolSize> pool_sizes
-    ) -> descriptor_pool_t {
-        const VkDescriptorPoolCreateInfo pool_info{
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-            .maxSets = 1,
-            .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
-            .pPoolSizes = pool_sizes.data(),
-        };
-
-        VkDescriptorPool pool;
-        VK_ERROR(
-            vkCreateDescriptorPool(p_device.logical, &pool_info, nullptr, &pool)
-        );
-        return descriptor_pool_t{pool, p_device};
-    }
-
-    auto allocate_descriptor_set(const descriptor_set_layout_t &layout) const
-        -> VkDescriptorSet {
-        VkDescriptorSetAllocateInfo alloc_info{
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .descriptorPool = pool,
-            .descriptorSetCount = 1,
-            .pSetLayouts = &layout.layout,
-        };
-
-        VkDescriptorSet set;
-        VK_ERROR(vkAllocateDescriptorSets(device.logical, &alloc_info, &set));
-        return set;
-    }
-
-    NO_COPY(descriptor_pool_t);
-    YES_MOVE(descriptor_pool_t);
-
-    ~descriptor_pool_t() {
-        vkDestroyDescriptorPool(device.logical, pool, nullptr);
-    }
 };
 
 
@@ -224,7 +93,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto framebuffers = swapchain.create_framebuffers(render_pass);
 
     const auto uniform_buffer_descriptor_layout =
-        descriptor_set_layout_t::create(
+        mv::descriptor_set_layout_t::create(
             device,
             std::array<VkDescriptorSetLayoutBinding, 1>{
                 mv::uniform_buffer_t::get_set_layout_binding(
@@ -302,7 +171,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto image_available_semaphore = vulkan_semaphore_t::create(device);
     const auto render_done_semaphore = vulkan_semaphore_t::create(device);
 
-    const auto descriptor_pool = descriptor_pool_t::create(
+    const auto descriptor_pool = mv::descriptor_pool_t::create(
         device, std::array<VkDescriptorPoolSize, 1>{VkDescriptorPoolSize{
                     .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                     .descriptorCount = 1,

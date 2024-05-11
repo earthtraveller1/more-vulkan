@@ -393,6 +393,56 @@ auto buffer_t::copy_from(const buffer_t &p_other, VkCommandPool p_command_pool)
     );
 }
 
+auto descriptor_set_layout_t::create(
+    const vulkan_device_t &p_device,
+    std::span<const VkDescriptorSetLayoutBinding> bindings
+) -> descriptor_set_layout_t {
+    const VkDescriptorSetLayoutCreateInfo layout_info{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = static_cast<uint32_t>(bindings.size()),
+        .pBindings = bindings.data(),
+    };
+
+    VkDescriptorSetLayout layout;
+    VK_ERROR(vkCreateDescriptorSetLayout(
+        p_device.logical, &layout_info, nullptr, &layout
+    ));
+    return descriptor_set_layout_t{layout, p_device};
+}
+
+auto descriptor_pool_t::create(
+    const vulkan_device_t &p_device,
+    std::span<const VkDescriptorPoolSize> pool_sizes
+) -> descriptor_pool_t {
+    const VkDescriptorPoolCreateInfo pool_info{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .maxSets = 1,
+        .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
+        .pPoolSizes = pool_sizes.data(),
+    };
+
+    VkDescriptorPool pool;
+    VK_ERROR(
+        vkCreateDescriptorPool(p_device.logical, &pool_info, nullptr, &pool)
+    );
+    return descriptor_pool_t{pool, p_device};
+}
+
+auto descriptor_pool_t::allocate_descriptor_set(
+    const descriptor_set_layout_t &layout
+) const -> VkDescriptorSet {
+    VkDescriptorSetAllocateInfo alloc_info{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = pool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &layout.layout,
+    };
+
+    VkDescriptorSet set;
+    VK_ERROR(vkAllocateDescriptorSets(device.logical, &alloc_info, &set));
+    return set;
+}
+
 } // namespace mv
 
 namespace {

@@ -217,4 +217,49 @@ constexpr static std::array<VkVertexInputAttributeDescription, 1>
         .offset = offsetof(vertex_t, position),
     }};
 
+struct descriptor_set_layout_t {
+    VkDescriptorSetLayout layout;
+    const vulkan_device_t &device;
+
+    descriptor_set_layout_t(
+        VkDescriptorSetLayout p_layout, const vulkan_device_t &p_device
+    )
+        : layout(p_layout), device(p_device) {}
+
+    NO_COPY(descriptor_set_layout_t);
+    YES_MOVE(descriptor_set_layout_t);
+
+    static auto create(
+        const vulkan_device_t &p_device,
+        std::span<const VkDescriptorSetLayoutBinding> bindings
+    ) -> descriptor_set_layout_t;
+
+    ~descriptor_set_layout_t() {
+        vkDestroyDescriptorSetLayout(device.logical, layout, nullptr);
+    }
+};
+
+struct descriptor_pool_t {
+    VkDescriptorPool pool;
+    const vulkan_device_t &device;
+
+    descriptor_pool_t(VkDescriptorPool p_pool, const vulkan_device_t &p_device)
+        : pool(p_pool), device(p_device) {}
+
+    static auto create(
+        const vulkan_device_t &p_device,
+        std::span<const VkDescriptorPoolSize> pool_sizes
+    ) -> descriptor_pool_t;
+
+    auto allocate_descriptor_set(const descriptor_set_layout_t &layout) const
+        -> VkDescriptorSet;
+
+    NO_COPY(descriptor_pool_t);
+    YES_MOVE(descriptor_pool_t);
+
+    ~descriptor_pool_t() {
+        vkDestroyDescriptorPool(device.logical, pool, nullptr);
+    }
+};
+
 } // namespace mv
