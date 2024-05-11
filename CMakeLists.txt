@@ -12,7 +12,13 @@ FetchContent_Declare(
     GIT_TAG 3.4
 )
 
-FetchContent_MakeAvailable(glfw)
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG 0.9.9.8
+)
+
+FetchContent_MakeAvailable(glfw glm)
 
 find_package(Vulkan)
 
@@ -29,7 +35,7 @@ foreach(SHADER ${SHADERS})
     target_sources(${PROJECT_NAME} PRIVATE ${SHADER}.spv)
 endforeach()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan)
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm)
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE src/precompiled.hpp)
 

@@ -3,6 +3,7 @@
 #include <span>
 
 #include <vulkan/vulkan.h>
+#include <glm/glm.hpp>
 
 #include "common.hpp"
 #include "device.hpp"
@@ -151,14 +152,8 @@ struct staging_buffer_t {
     }
 };
 
-struct vector_3f_t {
-    float x;
-    float y;
-    float z;
-};
-
 struct vertex_t {
-    vector_3f_t position;
+    glm::vec3 position;
 };
 
 constexpr VkVertexInputBindingDescription vertex_input_binding_description{
