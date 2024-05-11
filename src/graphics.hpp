@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include <vulkan/vulkan.h>
 
 #include "common.hpp"
@@ -27,7 +29,7 @@ struct graphics_pipeline_t {
     static auto create(
         const mv::vulkan_device_t &device, const render_pass_t &p_render_pass,
         std::string_view vertex_shader_path,
-        std::string_view fragment_shader_path
+        std::string_view fragment_shader_path, std::span<const VkPushConstantRange> push_constant_ranges
     ) -> graphics_pipeline_t;
 
     NO_COPY(graphics_pipeline_t);

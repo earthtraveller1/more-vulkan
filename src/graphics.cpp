@@ -1,5 +1,7 @@
 #include <fstream>
+#include <span>
 #include <stdexcept>
+
 #include <vulkan/vulkan_core.h>
 
 #include "common.hpp"
@@ -15,14 +17,16 @@ namespace mv {
 auto graphics_pipeline_t::create(
     const mv::vulkan_device_t &p_device, const render_pass_t &p_render_pass,
     std::string_view p_vertex_shader_path,
-    std::string_view p_fragment_shader_path
+    std::string_view p_fragment_shader_path,
+    std::span<const VkPushConstantRange> push_constant_ranges
 ) -> graphics_pipeline_t {
     const VkPipelineLayoutCreateInfo pipeline_layout_create_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .setLayoutCount = 0,
         .pSetLayouts = nullptr,
-        .pushConstantRangeCount = 0,
-        .pPushConstantRanges = nullptr,
+        .pushConstantRangeCount =
+            static_cast<uint32_t>(push_constant_ranges.size()),
+        .pPushConstantRanges = push_constant_ranges.data(),
     };
 
     VkPipelineLayout pipeline_layout;
