@@ -11,6 +11,7 @@
 #include "graphics.hpp"
 #include "present.hpp"
 #include "sync.hpp"
+#include "buffers.hpp"
 
 using mv::vulkan_device_t;
 using mv::vulkan_fence_t;
