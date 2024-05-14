@@ -13,4 +13,8 @@
         }                                                                      \
     } while (0)
 
-#define YES_MOVE(c) c(c &&) = default
+#define YES_MOVE(c)                                                            \
+    c(c &&) = default;                                                         \
+
+#define YES_MOVE_ASSIGN(c)                                                     \
+    c &operator=(c &&) = default;                                              \

@@ -40,7 +40,7 @@ struct swapchain_t {
     VkFormat format;
     VkExtent2D extent;
 
-    const vulkan_device_t &device;
+    const vulkan_device_t *device;
 
     swapchain_t(
         VkSwapchainKHR p_swapchain, const vulkan_device_t &p_device,
@@ -49,7 +49,7 @@ struct swapchain_t {
         VkExtent2D p_extent
     )
         : swapchain(p_swapchain), images(p_images), image_views(p_image_views),
-          format(p_format), extent(p_extent), device(p_device) {}
+          format(p_format), extent(p_extent), device(&p_device) {}
 
     static auto create(const vulkan_device_t &device, const window_t &window)
         -> swapchain_t;
@@ -70,13 +70,14 @@ struct swapchain_t {
 
     NO_COPY(swapchain_t);
     YES_MOVE(swapchain_t);
+    YES_MOVE_ASSIGN(swapchain_t);
 
     inline ~swapchain_t() {
         for (auto view : image_views) {
-            vkDestroyImageView(device.logical, view, nullptr);
+            vkDestroyImageView(device->logical, view, nullptr);
         }
 
-        vkDestroySwapchainKHR(device.logical, swapchain, nullptr);
+        vkDestroySwapchainKHR(device->logical, swapchain, nullptr);
     }
 };
 } // namespace mv
