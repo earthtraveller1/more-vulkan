@@ -5,13 +5,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "buffers.hpp"
 #include "device.hpp"
 #include "enumerate.hpp"
 #include "errors.hpp"
 #include "graphics.hpp"
 #include "present.hpp"
 #include "sync.hpp"
-#include "buffers.hpp"
 
 using mv::vulkan_device_t;
 using mv::vulkan_fence_t;
@@ -151,11 +151,12 @@ int main(int p_argc, const char *const *const p_argv) try {
     }
 
     const auto instance = mv::vulkan_instance_t::create(enable_validation);
-    const auto window = mv::window_t::create(instance, "Hello!", 1280, 720);
+    auto window = mv::window_t::create(instance, "Hello!", 1280, 720);
+    window.set_user_pointer();
     const auto device = mv::vulkan_device_t::create(instance, window.surface);
-    const auto swapchain = mv::swapchain_t::create(device, window);
+    auto swapchain = mv::swapchain_t::create(device, window);
     const auto render_pass = mv::render_pass_t::create(device, swapchain);
-    const auto framebuffers = swapchain.create_framebuffers(render_pass);
+    auto framebuffers = swapchain.create_framebuffers(render_pass);
 
     const auto uniform_buffer_descriptor_layout =
         mv::descriptor_set_layout_t::create(
@@ -293,13 +294,29 @@ int main(int p_argc, const char *const *const p_argv) try {
         vkWaitForFences(
             device.logical, 1, &frame_fence.fence, VK_TRUE, UINT64_MAX
         );
-        vkResetFences(device.logical, 1, &frame_fence.fence);
 
         uint32_t image_index;
-        VK_ERROR(vkAcquireNextImageKHR(
+        auto result = vkAcquireNextImageKHR(
             device.logical, swapchain.swapchain, UINT64_MAX,
             image_available_semaphore.semaphore, VK_NULL_HANDLE, &image_index
-        ));
+        );
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+            // Make sure the device is done doing shit before we try to
+            // destroy the swapchain
+            vkDeviceWaitIdle(device.logical);
+
+            framebuffers.fucking_destroy();
+            swapchain.fucking_destroy();
+            swapchain = mv::swapchain_t::create(device, window);
+            framebuffers = swapchain.create_framebuffers(render_pass);
+
+            continue;
+        } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+            throw mv::vulkan_exception{result};
+        }
+
+        vkResetFences(device.logical, 1, &frame_fence.fence);
 
         vkResetCommandBuffer(command_buffer, 0);
 
@@ -411,7 +428,21 @@ int main(int p_argc, const char *const *const p_argv) try {
             .pImageIndices = &image_index,
         };
 
-        VK_ERROR(vkQueuePresentKHR(device.present_queue, &present_info));
+        result = vkQueuePresentKHR(device.present_queue, &present_info);
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+            // Make sure the device is done doing shit before we try to
+            // destroy the swapchain
+            vkDeviceWaitIdle(device.logical);
+            std::cout << "[INFO]: second recreation.\n";
+
+            TRACE(swapchain = mv::swapchain_t{});
+            TRACE(framebuffers = mv::swapchain_t::framebuffers_t{});
+            TRACE(swapchain = mv::swapchain_t::create(device, window));
+            TRACE(framebuffers = swapchain.create_framebuffers(render_pass));
+        } else if (result != VK_SUCCESS) {
+            throw mv::vulkan_exception{result};
+        }
 
         glfwPollEvents();
 

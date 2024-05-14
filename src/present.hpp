@@ -51,7 +51,8 @@ struct swapchain_t {
         VkExtent2D p_extent
     )
         : swapchain(p_swapchain), images(p_images), image_views(p_image_views),
-          format(p_format), extent(p_extent), device(&p_device) {}
+          format(p_format), extent(p_extent), device(&p_device) {
+    }
 
     static auto create(const vulkan_device_t &device, const window_t &window)
         -> swapchain_t;
@@ -59,6 +60,8 @@ struct swapchain_t {
     struct framebuffers_t {
         std::vector<VkFramebuffer> framebuffers;
         const vulkan_device_t *device;
+
+        framebuffers_t() = default;
 
         framebuffers_t(
             std::vector<VkFramebuffer> &&p_framebuffers,
@@ -69,12 +72,29 @@ struct swapchain_t {
         NO_COPY(framebuffers_t);
 
         YES_MOVE(framebuffers_t);
-        YES_MOVE_ASSIGN(framebuffers_t);
 
-        ~framebuffers_t() {
+        auto operator=(framebuffers_t &&other) noexcept -> framebuffers_t & {
+            fucking_destroy();
+
+            framebuffers = std::move(other.framebuffers);
+            device = other.device;
+
+            other.device = nullptr;
+            other.framebuffers.clear();
+            return *this;
+        }
+
+        auto fucking_destroy() noexcept -> void {
+            if (device == nullptr)
+                return;
+
             for (auto framebuffer : framebuffers) {
                 vkDestroyFramebuffer(device->logical, framebuffer, nullptr);
             }
+        }
+
+        ~framebuffers_t() {
+            fucking_destroy();
         }
     };
 
@@ -83,21 +103,39 @@ struct swapchain_t {
 
     NO_COPY(swapchain_t);
     YES_MOVE(swapchain_t);
-    YES_MOVE_ASSIGN(swapchain_t);
 
-    inline ~swapchain_t() {
+    auto operator=(swapchain_t &&other) noexcept -> swapchain_t & {
+        fucking_destroy();
+
+        swapchain = other.swapchain;
+        images = std::move(other.images);
+        image_views = std::move(other.image_views);
+        format = other.format;
+        extent = other.extent;
+        device = other.device;
+
+        other.swapchain = VK_NULL_HANDLE;
+        other.device = nullptr;
+        other.images.clear();
+        other.image_views.clear();
+        return *this;
+    }
+
+    inline auto fucking_destroy() noexcept -> void {
         if (device == nullptr)
             return;
 
         for (auto view : image_views) {
-            if (view != VK_NULL_HANDLE) {
-                vkDestroyImageView(device->logical, view, nullptr);
-            }
+            vkDestroyImageView(device->logical, view, nullptr);
         }
 
         if (swapchain != VK_NULL_HANDLE) {
-            vkDestroySwapchainKHR(device->logical, swapchain, nullptr);
+            TRACE(vkDestroySwapchainKHR(device->logical, swapchain, nullptr));
         }
+    }
+
+    inline ~swapchain_t() {
+        fucking_destroy();
     }
 };
 } // namespace mv
