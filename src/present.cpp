@@ -22,7 +22,6 @@ auto window_t::create(
     VkInstance p_instance, std::string_view p_title, int p_width, int p_height
 ) -> window_t {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
     const auto window =
@@ -166,6 +165,7 @@ auto mv::swapchain_t::create(
     const auto result = vkCreateSwapchainKHR(
         p_device.logical, &swapchain_create_info, nullptr, &swapchain
     );
+
     if (result != VK_SUCCESS) {
         std::cerr << "[ERROR]: Failed to create the swapchain." << std::endl;
         throw mv::vulkan_exception{result};
@@ -251,5 +251,5 @@ auto mv::swapchain_t::create_framebuffers(const render_pass_t &render_pass
         framebuffers.push_back(framebuffer);
     }
 
-    return { framebuffers, *device };
+    return { std::move(framebuffers), *device };
 }

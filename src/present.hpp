@@ -42,6 +42,8 @@ struct swapchain_t {
 
     const vulkan_device_t *device;
 
+    swapchain_t() = default;
+
     swapchain_t(
         VkSwapchainKHR p_swapchain, const vulkan_device_t &p_device,
         std::vector<VkImage> &&p_images,
@@ -56,16 +58,27 @@ struct swapchain_t {
 
     struct framebuffers_t {
         std::vector<VkFramebuffer> framebuffers;
-        const vulkan_device_t& device;
+        const vulkan_device_t *device;
+
+        framebuffers_t(
+            std::vector<VkFramebuffer> &&p_framebuffers,
+            const vulkan_device_t &p_device
+        )
+            : framebuffers(p_framebuffers), device(&p_device) {}
+
+        NO_COPY(framebuffers_t);
+
+        YES_MOVE(framebuffers_t);
+        YES_MOVE_ASSIGN(framebuffers_t);
 
         ~framebuffers_t() {
             for (auto framebuffer : framebuffers) {
-                vkDestroyFramebuffer(device.logical, framebuffer, nullptr);
+                vkDestroyFramebuffer(device->logical, framebuffer, nullptr);
             }
         }
     };
 
-    auto create_framebuffers(const render_pass_t &render_pass) const 
+    auto create_framebuffers(const render_pass_t &render_pass) const
         -> framebuffers_t;
 
     NO_COPY(swapchain_t);
@@ -73,11 +86,18 @@ struct swapchain_t {
     YES_MOVE_ASSIGN(swapchain_t);
 
     inline ~swapchain_t() {
+        if (device == nullptr)
+            return;
+
         for (auto view : image_views) {
-            vkDestroyImageView(device->logical, view, nullptr);
+            if (view != VK_NULL_HANDLE) {
+                vkDestroyImageView(device->logical, view, nullptr);
+            }
         }
 
-        vkDestroySwapchainKHR(device->logical, swapchain, nullptr);
+        if (swapchain != VK_NULL_HANDLE) {
+            vkDestroySwapchainKHR(device->logical, swapchain, nullptr);
+        }
     }
 };
 } // namespace mv
