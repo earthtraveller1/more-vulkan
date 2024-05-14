@@ -193,38 +193,19 @@ int main(int p_argc, const char *const *const p_argv) try {
     append_cube_face_to_mesh(axis_t::y, false, false, vertices, indices);
     append_cube_face_to_mesh(axis_t::y, true, true, vertices, indices);
 
-    const auto vertex_buffer = mv::vertex_buffer_t::create(
+    auto vertex_buffer = mv::vertex_buffer_t::create(
         device, vertices.size() * sizeof(mv::vertex_t)
     );
+    vertex_buffer.buffer.load_using_staging(
+        command_pool.pool, vertices.data(),
+        vertices.size() * sizeof(mv::vertex_t)
+    );
 
-    {
-        auto staging_buffer = mv::staging_buffer_t::create(
-            device, vertices.size() * sizeof(mv::vertex_t)
-        );
-        const auto data = staging_buffer.map_memory();
-        std::memcpy(
-            data, vertices.data(), vertices.size() * sizeof(mv::vertex_t)
-        );
-        staging_buffer.unmap_memory();
-        vertex_buffer.buffer.copy_from(
-            staging_buffer.buffer, command_pool.pool
-        );
-        vkQueueWaitIdle(device.graphics_queue);
-    }
-
-    const auto index_buffer =
+    auto index_buffer =
         mv::index_buffer_t::create(device, indices.size() * sizeof(uint32_t));
-
-    {
-        auto staging_buffer = mv::staging_buffer_t::create(
-            device, indices.size() * sizeof(uint32_t)
-        );
-        const auto data = staging_buffer.map_memory();
-        std::memcpy(data, indices.data(), indices.size() * sizeof(uint32_t));
-        staging_buffer.unmap_memory();
-        index_buffer.buffer.copy_from(staging_buffer.buffer, command_pool.pool);
-        vkQueueWaitIdle(device.graphics_queue);
-    }
+    index_buffer.buffer.load_using_staging(
+        command_pool.pool, indices.data(), indices.size() * sizeof(uint32_t)
+    );
 
     const auto uniform_buffer =
         mv::uniform_buffer_t::create(device, sizeof(uniform_buffer_object_t));

@@ -160,4 +160,15 @@ auto buffer_t::copy_from(const buffer_t &p_other, VkCommandPool p_command_pool)
         vkQueueSubmit(device.graphics_queue, 1, &submit_info, VK_NULL_HANDLE)
     );
 }
+
+auto buffer_t::load_using_staging(
+    VkCommandPool p_command_pool, const void *p_data, VkDeviceSize size
+) -> void {
+    staging_buffer_t staging_buffer = staging_buffer_t::create(device, size);
+    const auto data = staging_buffer.map_memory();
+    memcpy(data, p_data, size);
+    staging_buffer.unmap_memory();
+    copy_from(staging_buffer.buffer, p_command_pool);
+    vkQueueWaitIdle(device.graphics_queue);
 }
+} // namespace mv

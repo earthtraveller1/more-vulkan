@@ -31,6 +31,8 @@ struct buffer_t {
     auto copy_from(const buffer_t &other, VkCommandPool command_buffer) const
         -> void;
 
+    auto load_using_staging(VkCommandPool command_pool, const void* data, VkDeviceSize size) -> void;
+
     ~buffer_t() {
         vkDestroyBuffer(device.logical, buffer, nullptr);
         vkFreeMemory(device.logical, memory, nullptr);
