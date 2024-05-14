@@ -15,10 +15,16 @@ struct window_t {
     VkSurfaceKHR surface;
     VkInstance instance;
 
+    int width, height;
+
     static auto create(
         VkInstance p_instance, std::string_view p_title, int p_width,
         int p_height
     ) -> window_t;
+
+    inline auto set_user_pointer() -> void {
+        glfwSetWindowUserPointer(window, this);
+    }
 
     inline ~window_t() {
         vkDestroySurfaceKHR(instance, surface, nullptr);

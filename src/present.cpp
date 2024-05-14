@@ -10,6 +10,14 @@
 
 using mv::window_t;
 
+namespace {
+auto framebuffer_size_callback(GLFWwindow *p_window, int p_width, int p_height) {
+    const auto window = reinterpret_cast<window_t *>(glfwGetWindowUserPointer(p_window));
+    window->width = p_width;
+    window->height = p_height;
+}
+}
+
 auto window_t::create(
     VkInstance p_instance, std::string_view p_title, int p_width, int p_height
 ) -> window_t {
@@ -35,10 +43,14 @@ auto window_t::create(
         throw mv::vulkan_exception{result};
     }
 
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
     return {
         .window = window,
         .surface = surface,
         .instance = p_instance,
+        .width = p_width,
+        .height = p_height,
     };
 }
 
