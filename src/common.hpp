@@ -13,8 +13,14 @@
         }                                                                      \
     } while (0)
 
-#define YES_MOVE(c)                                                            \
-    c(c &&) = default;                                                         \
+#define YES_MOVE(c) c(c &&) = default;
 
-#define YES_MOVE_ASSIGN(c)                                                     \
-    c &operator=(c &&) = default;                                              \
+#define YES_MOVE_ASSIGN(c) c &operator=(c &&) = default;
+
+#ifdef USE_TRACE
+#define TRACE(c)                                                               \
+    std::cerr << "[TRACE]: " << #c << " called.\n";                            \
+    c
+#else
+#define TRACE(c) c
+#endif
