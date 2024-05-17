@@ -61,7 +61,7 @@ struct vulkan_texture_t {
 
     auto copy_from_buffer(const buffer_t &source, const command_pool_t &command_pool) const -> void;
 
-    auto tansition_layout(
+    auto transition_layout(
         const command_pool_t &command_pool,
         VkImageLayout old_layout,
         VkImageLayout new_layout

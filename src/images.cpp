@@ -118,6 +118,13 @@ auto vulkan_texture_t::load_from_file(
     }
 
     auto texture = create(device, width, height);
+
+    texture.transition_layout(
+        command_pool,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    );
+
     auto staging_buffer =
         staging_buffer_t::create(device, width * height * 4 * sizeof(uint8_t));
     memcpy(
@@ -129,6 +136,12 @@ auto vulkan_texture_t::load_from_file(
 
     vkQueueWaitIdle(device.graphics_queue);
     stbi_image_free(data);
+
+    texture.transition_layout(
+        command_pool,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    );
 
     return texture;
 }
@@ -211,7 +224,7 @@ auto vulkan_texture_t::copy_from_buffer(
     );
 }
 
-auto vulkan_texture_t::tansition_layout(
+auto vulkan_texture_t::transition_layout(
     const command_pool_t &command_pool,
     VkImageLayout p_old_layout,
     VkImageLayout p_new_layout
