@@ -139,7 +139,7 @@ auto vulkan_texture_t::load_from_file(
 
     texture.transition_layout(
         command_pool,
-        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
 
@@ -248,7 +248,7 @@ auto vulkan_texture_t::transition_layout(
             p_new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
             return {
                 .src_access_mask = 0,
-                .src_stage_mask = 0,
+                .src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 .dst_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
                 .dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT,
             };
