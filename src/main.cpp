@@ -18,48 +18,6 @@ using mv::vulkan_fence_t;
 using mv::vulkan_semaphore_t;
 
 namespace {
-struct command_pool_t {
-    VkCommandPool pool;
-    const vulkan_device_t &device;
-
-    command_pool_t(VkCommandPool p_pool, const vulkan_device_t &p_device)
-        : pool(p_pool), device(p_device) {}
-
-    static auto create(const vulkan_device_t &p_device) -> command_pool_t {
-        const VkCommandPoolCreateInfo pool_info{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = p_device.graphics_family,
-        };
-
-        VkCommandPool pool;
-        VK_ERROR(
-            vkCreateCommandPool(p_device.logical, &pool_info, nullptr, &pool)
-        );
-        return command_pool_t(pool, p_device);
-    }
-
-    NO_COPY(command_pool_t);
-    YES_MOVE(command_pool_t);
-
-    auto allocate_buffer() const -> VkCommandBuffer {
-        VkCommandBufferAllocateInfo alloc_info{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = pool,
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = 1,
-        };
-
-        VkCommandBuffer buffer;
-        VK_ERROR(vkAllocateCommandBuffers(device.logical, &alloc_info, &buffer)
-        );
-        return buffer;
-    }
-
-    ~command_pool_t() {
-        vkDestroyCommandPool(device.logical, pool, nullptr);
-    }
-};
 
 struct push_constants_t {
     float t;
