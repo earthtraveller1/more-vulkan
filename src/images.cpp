@@ -7,10 +7,12 @@ namespace mv {
 auto vulkan_texture_t::create(
     const vulkan_device_t &device, uint32_t width, uint32_t height
 ) -> vulkan_texture_t {
+    const auto format = VK_FORMAT_R8G8B8A8_SRGB;
+
     const VkImageCreateInfo image_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_SRGB,
+        .format = format,
         .extent = {.width = width, .height = height, .depth = 1},
         .mipLevels = 1,
         .arrayLayers = 1,
@@ -69,7 +71,7 @@ auto vulkan_texture_t::create(
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_SRGB,
+        .format = format,
         .components =
             {.r = VK_COMPONENT_SWIZZLE_R,
              .g = VK_COMPONENT_SWIZZLE_G,
@@ -89,10 +91,7 @@ auto vulkan_texture_t::create(
     ));
 
     return {
-        image,
-        image_view,
-        memory,
-        device,
+        image, image_view, memory, format, device,
     };
 }
 
@@ -122,5 +121,33 @@ auto vulkan_texture_t::create_sampler() const -> sampler_t {
     );
 
     return {sampler, device};
+}
+
+auto vulkan_texture_t::tansition_layout(
+    const command_pool_t &command_pool, VkImageLayout old_layout,
+    VkImageLayout new_layout
+) const -> void {
+    const auto command_buffer = command_pool.allocate_buffer();
+
+    const VkCommandBufferBeginInfo begin_info{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+    };
+
+    VK_ERROR(vkBeginCommandBuffer(command_buffer, &begin_info));
+
+    // TODO: Add logic for transtioning the image layout.
+
+    VK_ERROR(vkEndCommandBuffer(command_buffer));
+
+    const VkSubmitInfo submit_info{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &command_buffer
+    };
+
+    VK_ERROR(
+        vkQueueSubmit(device.graphics_queue, 1, &submit_info, VK_NULL_HANDLE)
+    );
 }
 } // namespace mv

@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "commands.hpp"
 #include "common.hpp"
 #include "device.hpp"
 
@@ -10,12 +11,13 @@ struct vulkan_texture_t {
     VkImage image;
     VkImageView view;
     VkDeviceMemory memory;
+    VkFormat format;
 
     const vulkan_device_t &device;
 
     vulkan_texture_t(
         VkImage p_image, VkImageView p_view, VkDeviceMemory p_memory,
-        const vulkan_device_t &p_device
+        VkFormat format, const vulkan_device_t &p_device
     )
         : image(p_image), view(p_view), memory(p_memory), device(p_device) {}
 
@@ -41,6 +43,11 @@ struct vulkan_texture_t {
     };
 
     auto create_sampler() const -> sampler_t;
+
+    auto tansition_layout(
+        const command_pool_t &command_pool, VkImageLayout old_layout,
+        VkImageLayout new_layout
+    ) const -> void;
 
     inline ~vulkan_texture_t() noexcept {
         vkDestroyImageView(device.logical, view, nullptr);
