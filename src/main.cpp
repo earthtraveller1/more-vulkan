@@ -32,8 +32,11 @@ struct uniform_buffer_object_t {
 enum class axis_t { x, y, z };
 
 auto append_cube_face_to_mesh(
-    axis_t p_axis, bool p_negate, bool p_backface,
-    std::vector<mv::vertex_t> &p_vertices, std::vector<uint32_t> &p_indices
+    axis_t p_axis,
+    bool p_negate,
+    bool p_backface,
+    std::vector<mv::vertex_t> &p_vertices,
+    std::vector<uint32_t> &p_indices
 ) -> void {
     const float values[][2]{
         {0.5f, -0.5f},
@@ -127,7 +130,10 @@ int main(int p_argc, const char *const *const p_argv) try {
         );
 
     const auto pipeline = mv::graphics_pipeline_t::create(
-        device, render_pass, "shaders/basic.vert.spv", "shaders/basic.frag.spv",
+        device,
+        render_pass,
+        "shaders/basic.vert.spv",
+        "shaders/basic.frag.spv",
         std::array<VkPushConstantRange, 1>{VkPushConstantRange{
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
@@ -155,7 +161,8 @@ int main(int p_argc, const char *const *const p_argv) try {
         device, vertices.size() * sizeof(mv::vertex_t)
     );
     vertex_buffer.buffer.load_using_staging(
-        command_pool.pool, vertices.data(),
+        command_pool.pool,
+        vertices.data(),
         vertices.size() * sizeof(mv::vertex_t)
     );
 
@@ -173,10 +180,11 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto render_done_semaphore = vulkan_semaphore_t::create(device);
 
     const auto descriptor_pool = mv::descriptor_pool_t::create(
-        device, std::array<VkDescriptorPoolSize, 1>{VkDescriptorPoolSize{
-                    .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .descriptorCount = 1,
-                }}
+        device,
+        std::array<VkDescriptorPoolSize, 1>{VkDescriptorPoolSize{
+            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+        }}
     );
 
     const auto descriptor_set =
@@ -200,7 +208,13 @@ int main(int p_argc, const char *const *const p_argv) try {
     }
 
     uniform_buffer_object_t ubo{
-        .projection = glm::perspective(45.0f, 1280.0f / 720.0f, 0.1f, 100.0f),
+        .projection = glm::perspective(
+            45.0f,
+            static_cast<float>(window.width) /
+                static_cast<float>(window.height),
+            0.1f,
+            100.0f
+        ),
         .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)),
         .model = glm::mat4(1.0f)
     };
@@ -222,9 +236,18 @@ int main(int p_argc, const char *const *const p_argv) try {
             );
         }
 
+        ubo.projection = glm::perspective(
+            45.0f,
+            static_cast<float>(window.width) /
+                static_cast<float>(window.height),
+            0.1f,
+            100.0f
+        );
+
         if (glfwGetKey(window.window, GLFW_KEY_R)) {
             ubo.model = glm::rotate(
-                glm::mat4(1.0f), static_cast<float>(time),
+                glm::mat4(1.0f),
+                static_cast<float>(time),
                 glm::vec3(0.0f, 1.0f, 0.5f)
             );
             time += delta_time;
@@ -236,8 +259,12 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         uint32_t image_index;
         auto result = vkAcquireNextImageKHR(
-            device.logical, swapchain.swapchain, UINT64_MAX,
-            image_available_semaphore.semaphore, VK_NULL_HANDLE, &image_index
+            device.logical,
+            swapchain.swapchain,
+            UINT64_MAX,
+            image_available_semaphore.semaphore,
+            VK_NULL_HANDLE,
+            &image_index
         );
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -295,8 +322,14 @@ int main(int p_argc, const char *const *const p_argv) try {
         uniform_buffer.unmap_memory();
 
         vkCmdBindDescriptorSets(
-            command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0,
-            1, &descriptor_set, 0, nullptr
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            pipeline.layout,
+            0,
+            1,
+            &descriptor_set,
+            0,
+            nullptr
         );
 
         const VkViewport viewport{
@@ -330,8 +363,12 @@ int main(int p_argc, const char *const *const p_argv) try {
         };
 
         vkCmdPushConstants(
-            command_buffer, pipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-            sizeof(push_constants_t), &push_constants
+            command_buffer,
+            pipeline.layout,
+            VK_SHADER_STAGE_FRAGMENT_BIT,
+            0,
+            sizeof(push_constants_t),
+            &push_constants
         );
 
         // vkCmdDraw(command_buffer, 3, 1, 0, 0);
