@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef __cplusplus
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -11,3 +12,4 @@
 #include <optional>
 #include <string_view>
 #include <vector>
+#endif

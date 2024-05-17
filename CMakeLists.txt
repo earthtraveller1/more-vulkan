@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project("more-vulkan" LANGUAGES CXX VERSION 0.1.0)
+project("more-vulkan" LANGUAGES C CXX VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -18,7 +18,15 @@ FetchContent_Declare(
     GIT_TAG 0.9.9.8
 )
 
-FetchContent_MakeAvailable(glfw glm)
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+)
+
+FetchContent_MakeAvailable(glfw glm stb)
 
 find_package(Vulkan)
 
@@ -35,6 +43,7 @@ foreach(SHADER ${SHADERS})
     target_sources(${PROJECT_NAME} PRIVATE ${SHADER}.spv)
 endforeach()
 
+target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan glm)
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE src/precompiled.hpp)
