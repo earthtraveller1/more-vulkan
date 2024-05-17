@@ -72,7 +72,8 @@ auto operator<<(
 }
 
 template <typename T>
-auto operator<<(std::basic_ostream<T> &p_ostream, VkResult p_error_code) {
+auto operator<<(std::basic_ostream<T> &p_ostream, VkResult p_error_code)
+    -> std::basic_ostream<T> & {
     switch (p_error_code) {
     case VK_SUCCESS:
         return p_ostream << "VK_SUCCESS";
