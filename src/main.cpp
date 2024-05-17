@@ -6,6 +6,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "buffers.hpp"
+#include "commands.hpp"
 #include "device.hpp"
 #include "enumerate.hpp"
 #include "errors.hpp"
@@ -13,7 +14,6 @@
 #include "present.hpp"
 #include "sync.hpp"
 
-using mv::vulkan_device_t;
 using mv::vulkan_fence_t;
 using mv::vulkan_semaphore_t;
 
@@ -138,7 +138,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         }
     );
 
-    const auto command_pool = command_pool_t::create(device);
+    const auto command_pool = mv::command_pool_t::create(device);
     const auto command_buffer = command_pool.allocate_buffer();
 
     std::vector<mv::vertex_t> vertices;
