@@ -2,5 +2,7 @@ IndentWidth: 4
 ColumnLimit: 80
 AlignAfterOpenBracket: BlockIndent
 BreakBeforeBraces: Attach
+BinPackArguments: false
+BinPackParameters: false
 AllowShortBlocksOnASingleLine: Empty
 AllowShortFunctionsOnASingleLine: Empty
