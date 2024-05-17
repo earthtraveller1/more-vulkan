@@ -39,6 +39,10 @@ struct vulkan_texture_t {
     create(const vulkan_device_t &device, uint32_t width, uint32_t height)
         -> vulkan_texture_t;
 
+    static auto
+    load_from_file(const vulkan_device_t &device, const command_pool_t& command_pool, std::string_view file_path)
+        -> vulkan_texture_t;
+
     struct sampler_t {
         VkSampler sampler;
         const vulkan_device_t &device;
@@ -55,7 +59,7 @@ struct vulkan_texture_t {
 
     auto create_sampler() const -> sampler_t;
 
-    auto copy_from_buffer(buffer_t &source, command_pool_t &command_pool) const;
+    auto copy_from_buffer(const buffer_t &source, const command_pool_t &command_pool) const -> void;
 
     auto tansition_layout(
         const command_pool_t &command_pool,

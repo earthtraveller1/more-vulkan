@@ -1,3 +1,5 @@
+#include <stb_image.h>
+
 #include "buffers.hpp"
 #include "common.hpp"
 #include "errors.hpp"
@@ -102,6 +104,35 @@ auto vulkan_texture_t::create(
     };
 }
 
+auto vulkan_texture_t::load_from_file(
+    const vulkan_device_t &device,
+    const command_pool_t &command_pool,
+    std::string_view file_path
+) -> vulkan_texture_t {
+    int width, height, channels;
+    const auto data =
+        stbi_load(file_path.data(), &width, &height, &channels, 4);
+
+    if (data == nullptr) {
+        throw file_exception(file_exception::type_t::read, file_path);
+    }
+
+    auto texture = create(device, width, height);
+    auto staging_buffer =
+        staging_buffer_t::create(device, width * height * 4 * sizeof(uint8_t));
+    memcpy(
+        staging_buffer.map_memory(), data, width * height * 4 * sizeof(uint8_t)
+    );
+    staging_buffer.unmap_memory();
+
+    texture.copy_from_buffer(staging_buffer.buffer, command_pool);
+
+    vkQueueWaitIdle(device.graphics_queue);
+    stbi_image_free(data);
+
+    return texture;
+}
+
 auto vulkan_texture_t::create_sampler() const -> sampler_t {
     const VkSamplerCreateInfo sampler_create_info{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -131,8 +162,8 @@ auto vulkan_texture_t::create_sampler() const -> sampler_t {
 }
 
 auto vulkan_texture_t::copy_from_buffer(
-    buffer_t &p_source, command_pool_t &p_command_pool
-) const {
+    const buffer_t &p_source, const command_pool_t &p_command_pool
+) const -> void {
     const auto command_buffer = p_command_pool.allocate_buffer();
 
     const VkCommandBufferBeginInfo begin_info{
@@ -178,8 +209,6 @@ auto vulkan_texture_t::copy_from_buffer(
     VK_ERROR(
         vkQueueSubmit(device.graphics_queue, 1, &submit_info, VK_NULL_HANDLE)
     );
-
-    vkQueueWaitIdle(device.graphics_queue);
 }
 
 auto vulkan_texture_t::tansition_layout(
