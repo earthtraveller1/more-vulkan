@@ -1,3 +1,4 @@
+#include "images.hpp"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -219,6 +220,10 @@ int main(int p_argc, const char *const *const p_argv) try {
         .model = glm::mat4(1.0f)
     };
 
+    const auto texture = mv::vulkan_texture_t::load_from_file(
+        device, command_pool, "textures/can-pooper.png"
+    );
+
     double delta_time = 0.0;
     double time = 0.0;
 
@@ -430,7 +435,9 @@ int main(int p_argc, const char *const *const p_argv) try {
 } catch (const mv::vulkan_exception &e) {
     std::cerr << "[ERROR]: Vulkan error " << e.error_code << '\n';
     return EXIT_FAILURE;
+} catch (const mv::file_exception &e) {
+    std::cerr << "[ERROR]: Failed to " << e.type << " " << e.file_name << '\n';
 } catch (const std::exception &e) {
-    std::cerr << "[ERROR]: " << e.what() << '\n';
+    std::cerr << "[ERROR]: Failed to " << e.what() << '\n';
     return EXIT_FAILURE;
 }

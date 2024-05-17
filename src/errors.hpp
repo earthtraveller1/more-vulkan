@@ -2,7 +2,6 @@
 
 #include <vulkan/vulkan.h>
 
-
 namespace mv {
 struct glfw_init_failed_exception : public std::exception {
     virtual const char *what() const noexcept override {
@@ -38,7 +37,7 @@ struct no_adequate_swapchain_settings_exception : public std::exception {
     }
 };
 
-struct file_exception: public std::exception {
+struct file_exception : public std::exception {
     enum class type_t {
         open,
         read,
@@ -51,11 +50,23 @@ struct file_exception: public std::exception {
 
     virtual const char *what() const noexcept override {
         switch (type) {
-            case type_t::open:
-                return "Failed to open file.";
-            case type_t::read:
-                return "Failed to read file.";
+        case type_t::open:
+            return "Failed to open file.";
+        case type_t::read:
+            return "Failed to read file.";
         }
     }
 };
+} // namespace mv
+
+template <typename T>
+auto operator<<(
+    std::basic_ostream<T> &p_ostream, const mv::file_exception::type_t &p_type
+) -> std::basic_ostream<T> & {
+    switch (p_type) {
+    case mv::file_exception::type_t::open:
+        return p_ostream << "open";
+    case mv::file_exception::type_t::read:
+        return p_ostream << "read";
+    }
 }
