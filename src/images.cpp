@@ -1,3 +1,4 @@
+#include "buffers.hpp"
 #include "common.hpp"
 #include "errors.hpp"
 
@@ -95,6 +96,8 @@ auto vulkan_texture_t::create(
         image_view,
         memory,
         format,
+        width,
+        height,
         device,
     };
 }
@@ -125,6 +128,58 @@ auto vulkan_texture_t::create_sampler() const -> sampler_t {
     );
 
     return {sampler, device};
+}
+
+auto vulkan_texture_t::copy_from_buffer(
+    buffer_t &p_source, command_pool_t &p_command_pool
+) const {
+    const auto command_buffer = p_command_pool.allocate_buffer();
+
+    const VkCommandBufferBeginInfo begin_info{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+    };
+
+    VK_ERROR(vkBeginCommandBuffer(command_buffer, &begin_info));
+
+    const VkBufferImageCopy copy_region{
+        .bufferOffset = 0,
+        .bufferRowLength = 0,
+        .bufferImageHeight = 0,
+        .imageSubresource =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+
+        .imageOffset = {0, 0, 0},
+        .imageExtent = {width, height, 1}
+    };
+
+    vkCmdCopyBufferToImage(
+        command_buffer,
+        p_source.buffer,
+        image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &copy_region
+    );
+
+    VK_ERROR(vkEndCommandBuffer(command_buffer));
+
+    const VkSubmitInfo submit_info{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &command_buffer
+    };
+
+    VK_ERROR(
+        vkQueueSubmit(device.graphics_queue, 1, &submit_info, VK_NULL_HANDLE)
+    );
+
+    vkQueueWaitIdle(device.graphics_queue);
 }
 
 auto vulkan_texture_t::tansition_layout(

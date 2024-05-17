@@ -7,20 +7,30 @@
 #include "device.hpp"
 
 namespace mv {
+struct buffer_t;
+
 struct vulkan_texture_t {
     VkImage image;
     VkImageView view;
     VkDeviceMemory memory;
     VkFormat format;
 
+    uint32_t width;
+    uint32_t height;
+
     const vulkan_device_t &device;
 
     vulkan_texture_t(
-        VkImage p_image, VkImageView p_view, VkDeviceMemory p_memory,
-        VkFormat p_format, const vulkan_device_t &p_device
+        VkImage p_image,
+        VkImageView p_view,
+        VkDeviceMemory p_memory,
+        VkFormat p_format,
+        uint32_t p_width,
+        uint32_t p_height,
+        const vulkan_device_t &p_device
     )
         : image(p_image), view(p_view), memory(p_memory), format(p_format),
-          device(p_device) {}
+          width(p_width), height(p_height), device(p_device) {}
 
     NO_COPY(vulkan_texture_t);
     YES_MOVE(vulkan_texture_t);
@@ -45,8 +55,11 @@ struct vulkan_texture_t {
 
     auto create_sampler() const -> sampler_t;
 
+    auto copy_from_buffer(buffer_t &source, command_pool_t &command_pool) const;
+
     auto tansition_layout(
-        const command_pool_t &command_pool, VkImageLayout old_layout,
+        const command_pool_t &command_pool,
+        VkImageLayout old_layout,
         VkImageLayout new_layout
     ) const -> void;
 
