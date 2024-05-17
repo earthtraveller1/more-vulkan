@@ -9,15 +9,17 @@ namespace mv {
 struct vulkan_texture_t {
     VkImage image;
     VkImageView view;
+    VkSampler sampler;
     VkDeviceMemory memory;
 
     const vulkan_device_t &device;
 
     vulkan_texture_t(
         VkImage p_image, VkImageView p_view, VkDeviceMemory p_memory,
-        const vulkan_device_t &p_device
+        VkSampler sampler, const vulkan_device_t &p_device
     )
-        : image(p_image), view(p_view), memory(p_memory), device(p_device) {}
+        : image(p_image), view(p_view), sampler(sampler), memory(p_memory),
+          device(p_device) {}
 
     NO_COPY(vulkan_texture_t);
     YES_MOVE(vulkan_texture_t);
