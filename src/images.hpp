@@ -17,9 +17,10 @@ struct vulkan_texture_t {
 
     vulkan_texture_t(
         VkImage p_image, VkImageView p_view, VkDeviceMemory p_memory,
-        VkFormat format, const vulkan_device_t &p_device
+        VkFormat p_format, const vulkan_device_t &p_device
     )
-        : image(p_image), view(p_view), memory(p_memory), device(p_device) {}
+        : image(p_image), view(p_view), memory(p_memory), format(p_format),
+          device(p_device) {}
 
     NO_COPY(vulkan_texture_t);
     YES_MOVE(vulkan_texture_t);

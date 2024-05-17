@@ -91,7 +91,11 @@ auto vulkan_texture_t::create(
     ));
 
     return {
-        image, image_view, memory, format, device,
+        image,
+        image_view,
+        memory,
+        format,
+        device,
     };
 }
 
@@ -124,8 +128,9 @@ auto vulkan_texture_t::create_sampler() const -> sampler_t {
 }
 
 auto vulkan_texture_t::tansition_layout(
-    const command_pool_t &command_pool, VkImageLayout old_layout,
-    VkImageLayout new_layout
+    const command_pool_t &command_pool,
+    VkImageLayout p_old_layout,
+    VkImageLayout p_new_layout
 ) const -> void {
     const auto command_buffer = command_pool.allocate_buffer();
 
@@ -136,7 +141,63 @@ auto vulkan_texture_t::tansition_layout(
 
     VK_ERROR(vkBeginCommandBuffer(command_buffer, &begin_info));
 
-    // TODO: Add logic for transtioning the image layout.
+    struct masks_t {
+        VkAccessFlags src_access_mask;
+        VkPipelineStageFlags src_stage_mask;
+        VkAccessFlags dst_access_mask;
+        VkPipelineStageFlags dst_stage_mask;
+    } masks = [&]() -> masks_t {
+        if (p_old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
+            p_new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+            return {
+                .src_access_mask = 0,
+                .src_stage_mask = 0,
+                .dst_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                .dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+            };
+        } else if (p_old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && p_new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+            return {
+                .src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                .src_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+                .dst_access_mask = VK_ACCESS_SHADER_READ_BIT,
+                .dst_stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            };
+        } else {
+            throw std::runtime_error("unsupported layout transition.");
+        }
+    }();
+
+    VkImageMemoryBarrier barrier{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcAccessMask = masks.src_access_mask, // TODO
+        .dstAccessMask = masks.dst_access_mask, // TODO
+        .oldLayout = p_old_layout,
+        .newLayout = p_new_layout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image,
+        .subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        masks.src_stage_mask,
+        masks.dst_stage_mask,
+        0,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        1,
+        &barrier
+    );
 
     VK_ERROR(vkEndCommandBuffer(command_buffer));
 
