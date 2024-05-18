@@ -39,9 +39,11 @@ struct vulkan_texture_t {
     create(const vulkan_device_t &device, uint32_t width, uint32_t height)
         -> vulkan_texture_t;
 
-    static auto
-    load_from_file(const vulkan_device_t &device, const command_pool_t& command_pool, std::string_view file_path)
-        -> vulkan_texture_t;
+    static auto load_from_file(
+        const vulkan_device_t &device,
+        const command_pool_t &command_pool,
+        std::string_view file_path
+    ) -> vulkan_texture_t;
 
     struct sampler_t {
         VkSampler sampler;
@@ -59,13 +61,35 @@ struct vulkan_texture_t {
 
     auto create_sampler() const -> sampler_t;
 
-    auto copy_from_buffer(const buffer_t &source, const command_pool_t &command_pool) const -> void;
+    auto copy_from_buffer(
+        const buffer_t &source, const command_pool_t &command_pool
+    ) const -> void;
 
     auto transition_layout(
         const command_pool_t &command_pool,
         VkImageLayout old_layout,
         VkImageLayout new_layout
     ) const -> void;
+
+    static auto
+    get_set_layout_binding(uint32_t binding, uint32_t descriptor_count, VkShaderStageFlags stage_flags)
+        -> VkDescriptorSetLayoutBinding {
+        return {
+            .binding = binding,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = descriptor_count,
+            .stageFlags = stage_flags,
+            .pImmutableSamplers = nullptr,
+        };
+    }
+
+    auto get_descriptor_image_info(VkSampler sampler) const -> VkDescriptorImageInfo {
+        return {
+            .sampler = sampler,
+            .imageView = view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+    }
 
     inline ~vulkan_texture_t() noexcept {
         vkDestroyImageView(device.logical, view, nullptr);

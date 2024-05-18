@@ -46,7 +46,7 @@ auto append_cube_face_to_mesh(
         {-0.5f, -0.5f},
     };
 
-    const float uvs[][2] {
+    const float uvs[][2]{
         {0.0f, 0.0f},
         {1.0f, 0.0f},
         {1.0f, 1.0f},
@@ -128,15 +128,17 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto render_pass = mv::render_pass_t::create(device, swapchain);
     auto framebuffers = swapchain.create_framebuffers(render_pass);
 
-    const auto uniform_buffer_descriptor_layout =
-        mv::descriptor_set_layout_t::create(
-            device,
-            std::array<VkDescriptorSetLayoutBinding, 1>{
-                mv::uniform_buffer_t::get_set_layout_binding(
-                    0, 1, VK_SHADER_STAGE_VERTEX_BIT
-                ),
-            }
-        );
+    const auto descriptor_set_layout = mv::descriptor_set_layout_t::create(
+        device,
+        std::array{
+            mv::uniform_buffer_t::get_set_layout_binding(
+                0, 1, VK_SHADER_STAGE_VERTEX_BIT
+            ),
+            mv::vulkan_texture_t::get_set_layout_binding(
+                1, 1, VK_SHADER_STAGE_FRAGMENT_BIT
+            ),
+        }
+    );
 
     const auto pipeline = mv::graphics_pipeline_t::create(
         device,
@@ -149,7 +151,7 @@ int main(int p_argc, const char *const *const p_argv) try {
             .size = sizeof(push_constants_t),
         }},
         std::array<VkDescriptorSetLayout, 1>{
-            uniform_buffer_descriptor_layout.layout,
+            descriptor_set_layout.layout,
         }
     );
 
@@ -190,30 +192,56 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto descriptor_pool = mv::descriptor_pool_t::create(
         device,
-        std::array<VkDescriptorPoolSize, 1>{VkDescriptorPoolSize{
-            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-        }}
+        std::array{
+            VkDescriptorPoolSize{
+                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = 1,
+            },
+            VkDescriptorPoolSize{
+                .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1,
+            }
+        }
     );
 
+    const auto texture = mv::vulkan_texture_t::load_from_file(
+        device, command_pool, "textures/can-pooper.png"
+    );
+
+    const auto texture_sampler = texture.create_sampler();
+
     const auto descriptor_set =
-        descriptor_pool.allocate_descriptor_set(uniform_buffer_descriptor_layout
-        );
+        descriptor_pool.allocate_descriptor_set(descriptor_set_layout);
 
     {
         const auto buffer_info = uniform_buffer.get_descriptor_buffer_info();
+        const auto image_info =
+            texture.get_descriptor_image_info(texture_sampler.sampler);
 
-        VkWriteDescriptorSet set_write{
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptor_set,
-            .dstBinding = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo = &buffer_info,
+        const std::array set_writes{
+            VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pBufferInfo = &buffer_info,
+            },
+            VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 1,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &image_info,
+            }
         };
 
-        vkUpdateDescriptorSets(device.logical, 1, &set_write, 0, nullptr);
+        vkUpdateDescriptorSets(
+            device.logical, set_writes.size(), set_writes.data(), 0, nullptr
+        );
     }
 
     uniform_buffer_object_t ubo{
@@ -227,10 +255,6 @@ int main(int p_argc, const char *const *const p_argv) try {
         .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)),
         .model = glm::mat4(1.0f)
     };
-
-    const auto texture = mv::vulkan_texture_t::load_from_file(
-        device, command_pool, "textures/can-pooper.png"
-    );
 
     double delta_time = 0.0;
     double time = 0.0;
