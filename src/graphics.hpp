@@ -21,14 +21,17 @@ struct graphics_pipeline_t {
     const mv::vulkan_device_t &device;
 
     graphics_pipeline_t(
-        VkPipeline p_pipeline, const render_pass_t &p_render_pass,
-        VkPipelineLayout p_layout, const mv::vulkan_device_t &p_device
+        VkPipeline p_pipeline,
+        const render_pass_t &p_render_pass,
+        VkPipelineLayout p_layout,
+        const mv::vulkan_device_t &p_device
     )
         : pipeline(p_pipeline), layout(p_layout), render_pass(p_render_pass),
           device(p_device) {}
 
     static auto create(
-        const mv::vulkan_device_t &device, const render_pass_t &p_render_pass,
+        const mv::vulkan_device_t &device,
+        const render_pass_t &p_render_pass,
         std::string_view vertex_shader_path,
         std::string_view fragment_shader_path,
         std::span<const VkPushConstantRange> push_constant_ranges,
@@ -66,6 +69,7 @@ struct render_pass_t {
 };
 struct vertex_t {
     glm::vec3 position;
+    glm::vec2 uv;
 };
 
 constexpr VkVertexInputBindingDescription vertex_input_binding_description{
@@ -74,13 +78,20 @@ constexpr VkVertexInputBindingDescription vertex_input_binding_description{
     .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 };
 
-constexpr static std::array<VkVertexInputAttributeDescription, 1>
-    vertex_attribute_descriptions{VkVertexInputAttributeDescription{
+constexpr static std::array vertex_attribute_descriptions{
+    VkVertexInputAttributeDescription{
         .location = 0,
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(vertex_t, position),
-    }};
+    },
+    VkVertexInputAttributeDescription{
+        .location = 1,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(vertex_t, uv),
+    }
+};
 
 struct descriptor_set_layout_t {
     VkDescriptorSetLayout layout;

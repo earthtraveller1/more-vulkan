@@ -46,6 +46,13 @@ auto append_cube_face_to_mesh(
         {-0.5f, -0.5f},
     };
 
+    const float uvs[][2] {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f},
+    };
+
     const float third_value = p_negate ? -0.5f : 0.5f;
 
     const std::array indices{0, 1, 2, 0, 2, 3};
@@ -88,6 +95,7 @@ auto append_cube_face_to_mesh(
 
         p_vertices.push_back({
             .position = {x_value, y_value, z_value},
+            .uv = {uvs[indices[i]][0], uvs[indices[i]][1]},
         });
     }
 

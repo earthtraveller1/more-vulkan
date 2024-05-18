@@ -1,6 +1,7 @@
 #version 450
 
 layout (location = 0) in vec3 a_position;
+layout (location = 1) in vec2 a_uv;
 
 layout (binding = 0) uniform uniform_buffer_object_t {
     mat4 projection;
@@ -9,8 +10,10 @@ layout (binding = 0) uniform uniform_buffer_object_t {
 } uniform_buffer_object;
 
 layout (location = 0) out float x_pos;
+layout (location = 1) out vec2 uv;
 
 void main() {
     gl_Position = uniform_buffer_object.projection * uniform_buffer_object.view * uniform_buffer_object.model * vec4(a_position, 1.0);
     x_pos = a_position.x;
+    uv = a_uv;
 }

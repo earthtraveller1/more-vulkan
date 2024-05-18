@@ -7,6 +7,7 @@ layout (push_constant) uniform push_constants_t {
 } push_constants;
 
 layout (location = 0) in float x_pos;
+layout (location = 1) in vec2 uv;
 
 void main()
 {
