@@ -47,10 +47,10 @@ auto append_cube_face_to_mesh(
     };
 
     const float uvs[][2]{
-        {0.0f, 0.0f},
         {1.0f, 0.0f},
         {1.0f, 1.0f},
         {0.0f, 1.0f},
+        {0.0f, 0.0f},
     };
 
     const float third_value = p_negate ? -0.5f : 0.5f;
@@ -94,8 +94,8 @@ auto append_cube_face_to_mesh(
         }
 
         p_vertices.push_back({
-            .position = {x_value, y_value, z_value},
-            .uv = {uvs[indices[i]][0], uvs[indices[i]][1]},
+            .position = glm::vec3{x_value, y_value, z_value},
+            .uv = glm::vec2{uvs[i][0], uvs[i][1]},
         });
     }
 
@@ -171,6 +171,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     auto vertex_buffer = mv::vertex_buffer_t::create(
         device, vertices.size() * sizeof(mv::vertex_t)
     );
+
     vertex_buffer.buffer.load_using_staging(
         command_pool.pool,
         vertices.data(),
