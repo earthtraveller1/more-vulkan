@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include <stb_image.h>
 
 #include "buffers.hpp"
@@ -102,6 +104,95 @@ auto vulkan_texture_t::create(
         height,
         device,
     };
+}
+
+auto vulkan_texture_t::create_depth_attachment(
+    const vulkan_device_t &device, uint32_t width, uint32_t height
+) -> vulkan_texture_t {
+    const std::array format_candiates{
+        VK_FORMAT_D32_SFLOAT,
+        VK_FORMAT_D32_SFLOAT_S8_UINT,
+        VK_FORMAT_D24_UNORM_S8_UINT,
+    };
+
+    const auto format = std::find_if(
+        format_candiates.begin(),
+        format_candiates.end(),
+        [&](auto p_format) {
+            VkFormatProperties properties;
+            vkGetPhysicalDeviceFormatProperties(
+                device.physical, p_format, &properties
+            );
+
+            return (properties.optimalTilingFeatures &
+                    VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) ==
+                   VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        }
+    );
+
+    const VkImageCreateInfo image_create_info{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = *format,
+        .extent =
+            {
+                .width = width,
+                .height = height,
+                .depth = 1,
+            },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+    };
+
+    VkImage image;
+    VK_ERROR(vkCreateImage(device.logical, &image_create_info, nullptr, &image)
+    );
+
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(device.logical, image, &memory_requirements);
+
+    const auto memory_type_index = get_memory_type_index(
+        device,
+        memory_requirements.memoryTypeBits,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+
+    VkMemoryAllocateInfo memory_allocate_info{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memory_requirements.size,
+        .memoryTypeIndex = memory_type_index,
+    };
+
+    VkDeviceMemory memory;
+    VK_ERROR(vkAllocateMemory(
+        device.logical, &memory_allocate_info, nullptr, &memory
+    ));
+
+    vkBindImageMemory(device.logical, image, memory, 0);
+
+    const VkImageViewCreateInfo view_create_info{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = *format,
+        .subresourceRange =
+            {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+             .baseMipLevel = 0,
+             .levelCount = 1,
+             .baseArrayLayer = 0,
+             .layerCount = 1}
+    };
+
+    VkImageView view;
+    VK_ERROR(
+        vkCreateImageView(device.logical, &view_create_info, nullptr, &view)
+    );
+
+    return {image, view, memory, *format, width, height, device};
 }
 
 auto vulkan_texture_t::load_from_file(

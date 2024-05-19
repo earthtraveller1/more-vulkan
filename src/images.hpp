@@ -39,6 +39,10 @@ struct vulkan_texture_t {
     create(const vulkan_device_t &device, uint32_t width, uint32_t height)
         -> vulkan_texture_t;
 
+    static auto create_depth_attachment(
+        const vulkan_device_t &device, uint32_t width, uint32_t height
+    ) -> vulkan_texture_t;
+
     static auto load_from_file(
         const vulkan_device_t &device,
         const command_pool_t &command_pool,
@@ -71,9 +75,11 @@ struct vulkan_texture_t {
         VkImageLayout new_layout
     ) const -> void;
 
-    static auto
-    get_set_layout_binding(uint32_t binding, uint32_t descriptor_count, VkShaderStageFlags stage_flags)
-        -> VkDescriptorSetLayoutBinding {
+    static auto get_set_layout_binding(
+        uint32_t binding,
+        uint32_t descriptor_count,
+        VkShaderStageFlags stage_flags
+    ) -> VkDescriptorSetLayoutBinding {
         return {
             .binding = binding,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -83,7 +89,8 @@ struct vulkan_texture_t {
         };
     }
 
-    auto get_descriptor_image_info(VkSampler sampler) const -> VkDescriptorImageInfo {
+    auto get_descriptor_image_info(VkSampler sampler) const
+        -> VkDescriptorImageInfo {
         return {
             .sampler = sampler,
             .imageView = view,
