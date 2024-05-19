@@ -103,9 +103,11 @@ struct vulkan_texture_t {
     }
 
     inline ~vulkan_texture_t() noexcept {
-        vkDestroyImageView(device->logical, view, nullptr);
-        vkDestroyImage(device->logical, image, nullptr);
-        vkFreeMemory(device->logical, memory, nullptr);
+        if (device != nullptr) {
+            vkDestroyImageView(device->logical, view, nullptr);
+            vkDestroyImage(device->logical, image, nullptr);
+            vkFreeMemory(device->logical, memory, nullptr);
+        }
     }
 };
 } // namespace mv
