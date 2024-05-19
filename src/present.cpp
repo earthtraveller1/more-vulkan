@@ -5,18 +5,22 @@
 #include "device.hpp"
 #include "errors.hpp"
 #include "graphics.hpp"
+#include "images.hpp"
 
 #include "present.hpp"
 
 using mv::window_t;
 
 namespace {
-auto framebuffer_size_callback(GLFWwindow *p_window, int p_width, int p_height) {
-    const auto window = reinterpret_cast<window_t *>(glfwGetWindowUserPointer(p_window));
+auto framebuffer_size_callback(
+    GLFWwindow *p_window, int p_width, int p_height
+) {
+    const auto window =
+        reinterpret_cast<window_t *>(glfwGetWindowUserPointer(p_window));
     window->width = p_width;
     window->height = p_height;
 }
-}
+} // namespace
 
 auto window_t::create(
     VkInstance p_instance, std::string_view p_title, int p_width, int p_height
@@ -63,7 +67,9 @@ auto mv::swapchain_t::create(
 
     std::vector<VkSurfaceFormatKHR> surface_formats(surface_format_count);
     vkGetPhysicalDeviceSurfaceFormatsKHR(
-        p_device.physical, p_window.surface, &surface_format_count,
+        p_device.physical,
+        p_window.surface,
+        &surface_format_count,
         surface_formats.data()
     );
 
@@ -87,7 +93,9 @@ auto mv::swapchain_t::create(
 
     std::vector<VkPresentModeKHR> present_modes(present_mode_count);
     vkGetPhysicalDeviceSurfacePresentModesKHR(
-        p_device.physical, p_window.surface, &present_mode_count,
+        p_device.physical,
+        p_window.surface,
+        &present_mode_count,
         present_modes.data()
     );
 
@@ -228,16 +236,19 @@ auto mv::swapchain_t::create(
     };
 }
 
-auto mv::swapchain_t::create_framebuffers(const render_pass_t &render_pass
+auto mv::swapchain_t::create_framebuffers(
+    const render_pass_t &render_pass, const vulkan_texture_t &p_depth_buffer
 ) const -> mv::swapchain_t::framebuffers_t {
     std::vector<VkFramebuffer> framebuffers;
 
     for (auto view : image_views) {
+        const std::array attachments{view, p_depth_buffer.view};
+
         const VkFramebufferCreateInfo create_info{
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .renderPass = render_pass.render_pass,
-            .attachmentCount = 1,
-            .pAttachments = &view,
+            .attachmentCount = attachments.size(),
+            .pAttachments = attachments.data(),
             .width = extent.width,
             .height = extent.height,
             .layers = 1,
@@ -251,5 +262,5 @@ auto mv::swapchain_t::create_framebuffers(const render_pass_t &render_pass
         framebuffers.push_back(framebuffer);
     }
 
-    return { std::move(framebuffers), *device };
+    return {std::move(framebuffers), *device};
 }

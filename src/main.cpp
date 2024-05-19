@@ -125,8 +125,23 @@ int main(int p_argc, const char *const *const p_argv) try {
     window.set_user_pointer();
     const auto device = mv::vulkan_device_t::create(instance, window.surface);
     auto swapchain = mv::swapchain_t::create(device, window);
-    const auto render_pass = mv::render_pass_t::create(device, swapchain);
-    auto framebuffers = swapchain.create_framebuffers(render_pass);
+
+    const auto command_pool = mv::command_pool_t::create(device);
+
+    auto depth_buffer = mv::vulkan_texture_t::create_depth_attachment(
+        device, swapchain.extent.width, swapchain.extent.height
+    );
+
+    depth_buffer.transition_layout(
+        command_pool,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    );
+
+    const auto render_pass =
+        mv::render_pass_t::create(device, swapchain, depth_buffer.format);
+    auto framebuffers =
+        swapchain.create_framebuffers(render_pass, depth_buffer);
 
     const auto descriptor_set_layout = mv::descriptor_set_layout_t::create(
         device,
@@ -155,7 +170,6 @@ int main(int p_argc, const char *const *const p_argv) try {
         }
     );
 
-    const auto command_pool = mv::command_pool_t::create(device);
     const auto command_buffer = command_pool.allocate_buffer();
 
     std::vector<mv::vertex_t> vertices;
@@ -312,8 +326,19 @@ int main(int p_argc, const char *const *const p_argv) try {
 
             framebuffers.fucking_destroy();
             swapchain.fucking_destroy();
+            depth_buffer = mv::vulkan_texture_t{};
+
             swapchain = mv::swapchain_t::create(device, window);
-            framebuffers = swapchain.create_framebuffers(render_pass);
+            depth_buffer = mv::vulkan_texture_t::create_depth_attachment(
+                device, swapchain.extent.width, swapchain.extent.height
+            );
+            depth_buffer.transition_layout(
+                command_pool,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            );
+            framebuffers =
+                swapchain.create_framebuffers(render_pass, depth_buffer);
 
             continue;
         } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -331,8 +356,14 @@ int main(int p_argc, const char *const *const p_argv) try {
         VK_ERROR(vkBeginCommandBuffer(command_buffer, &begin_info));
 
         const VkClearValue clear_color{
-            .color = {.float32 = {0.0f, 0.01f, 0.01f, 1.0f}}
+            .color = {.float32 = {0.0f, 0.01f, 0.01f, 1.0f}},
         };
+
+        const VkClearValue clear_depth{
+            .depthStencil = {.depth = 1.0f, .stencil = 0},
+        };
+
+        const VkClearValue clear_values[] {clear_color, clear_depth};
 
         const VkRenderPassBeginInfo render_pass_begin_info{
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -343,8 +374,8 @@ int main(int p_argc, const char *const *const p_argv) try {
                     .offset = {0, 0},
                     .extent = swapchain.extent,
                 },
-            .clearValueCount = 1,
-            .pClearValues = &clear_color,
+            .clearValueCount = 2,
+            .pClearValues = clear_values,
         };
 
         vkCmdBeginRenderPass(
@@ -448,12 +479,22 @@ int main(int p_argc, const char *const *const p_argv) try {
             // Make sure the device is done doing shit before we try to
             // destroy the swapchain
             vkDeviceWaitIdle(device.logical);
-            std::cout << "[INFO]: second recreation.\n";
 
-            TRACE(swapchain = mv::swapchain_t{});
-            TRACE(framebuffers = mv::swapchain_t::framebuffers_t{});
-            TRACE(swapchain = mv::swapchain_t::create(device, window));
-            TRACE(framebuffers = swapchain.create_framebuffers(render_pass));
+            swapchain = mv::swapchain_t{};
+            depth_buffer = mv::vulkan_texture_t{};
+            framebuffers = mv::swapchain_t::framebuffers_t{};
+
+            swapchain = mv::swapchain_t::create(device, window);
+            depth_buffer = mv::vulkan_texture_t::create_depth_attachment(
+                device, swapchain.extent.width, swapchain.extent.height
+            );
+            depth_buffer.transition_layout(
+                command_pool,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            );
+            framebuffers =
+                swapchain.create_framebuffers(render_pass, depth_buffer);
         } else if (result != VK_SUCCESS) {
             throw mv::vulkan_exception{result};
         }

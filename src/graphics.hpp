@@ -59,9 +59,11 @@ struct render_pass_t {
     NO_COPY(render_pass_t);
     YES_MOVE(render_pass_t);
 
-    static auto
-    create(const mv::vulkan_device_t &device, const mv::swapchain_t &swapchain)
-        -> render_pass_t;
+    static auto create(
+        const mv::vulkan_device_t &device,
+        const mv::swapchain_t &swapchain,
+        VkFormat depth_format
+    ) -> render_pass_t;
 
     ~render_pass_t() {
         vkDestroyRenderPass(device.logical, render_pass, nullptr);

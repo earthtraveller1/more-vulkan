@@ -129,6 +129,15 @@ auto graphics_pipeline_t::create(
         .sampleShadingEnable = VK_FALSE,
     };
 
+    const VkPipelineDepthStencilStateCreateInfo depth_stencil_state {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = VK_TRUE,
+        .depthWriteEnable = VK_TRUE,
+        .depthCompareOp = VK_COMPARE_OP_LESS,
+        .depthBoundsTestEnable = VK_FALSE,
+        .stencilTestEnable = VK_FALSE
+    };
+
     const VkPipelineColorBlendAttachmentState color_blend_attachment{
         .blendEnable = VK_FALSE,
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
@@ -164,7 +173,7 @@ auto graphics_pipeline_t::create(
         .pViewportState = &viewport_state,
         .pRasterizationState = &rasterization_state,
         .pMultisampleState = &multisample_state,
-        .pDepthStencilState = nullptr,
+        .pDepthStencilState = &depth_stencil_state,
         .pColorBlendState = &color_blend_state,
         .pDynamicState = &dynamic_state,
         .layout = pipeline_layout,
@@ -191,7 +200,7 @@ auto graphics_pipeline_t::create(
 }
 
 auto render_pass_t::create(
-    const mv::vulkan_device_t &p_device, const mv::swapchain_t &p_swapchain
+    const mv::vulkan_device_t &p_device, const mv::swapchain_t &p_swapchain, VkFormat p_depth_format
 ) -> render_pass_t {
     const VkAttachmentDescription color_attachment{
         .format = p_swapchain.format,
@@ -204,21 +213,43 @@ auto render_pass_t::create(
         .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
     };
 
+    const VkAttachmentDescription depth_attachment{
+        .format = p_depth_format,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+
     const VkAttachmentReference color_attachment_reference{
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    const VkAttachmentReference depth_attachment_reference{
+        .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+
+    const std::array attachments {
+        color_attachment,
+        depth_attachment
     };
 
     const VkSubpassDescription subpass{
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_attachment_reference,
+        .pDepthStencilAttachment = &depth_attachment_reference,
     };
 
     const VkRenderPassCreateInfo render_pass_create_info{
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = 1,
-        .pAttachments = &color_attachment,
+        .attachmentCount = attachments.size(),
+        .pAttachments = attachments.data(),
         .subpassCount = 1,
         .pSubpasses = &subpass,
     };
