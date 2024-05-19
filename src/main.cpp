@@ -133,9 +133,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     );
 
     depth_buffer.transition_layout(
-        command_pool,
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     );
 
     const auto render_pass =
@@ -333,9 +331,7 @@ int main(int p_argc, const char *const *const p_argv) try {
                 device, swapchain.extent.width, swapchain.extent.height
             );
             depth_buffer.transition_layout(
-                command_pool,
-                VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+                command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             );
             framebuffers =
                 swapchain.create_framebuffers(render_pass, depth_buffer);
@@ -363,7 +359,7 @@ int main(int p_argc, const char *const *const p_argv) try {
             .depthStencil = {.depth = 1.0f, .stencil = 0},
         };
 
-        const VkClearValue clear_values[] {clear_color, clear_depth};
+        const VkClearValue clear_values[]{clear_color, clear_depth};
 
         const VkRenderPassBeginInfo render_pass_begin_info{
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -489,9 +485,7 @@ int main(int p_argc, const char *const *const p_argv) try {
                 device, swapchain.extent.width, swapchain.extent.height
             );
             depth_buffer.transition_layout(
-                command_pool,
-                VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+                command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             );
             framebuffers =
                 swapchain.create_framebuffers(render_pass, depth_buffer);

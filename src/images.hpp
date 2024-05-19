@@ -14,6 +14,7 @@ struct vulkan_texture_t {
     VkImageView view;
     VkDeviceMemory memory;
     VkFormat format;
+    VkImageLayout layout;
 
     uint32_t width;
     uint32_t height;
@@ -27,12 +28,14 @@ struct vulkan_texture_t {
         VkImageView p_view,
         VkDeviceMemory p_memory,
         VkFormat p_format,
+        VkImageLayout p_layout,
         uint32_t p_width,
         uint32_t p_height,
         const vulkan_device_t &p_device
     )
         : image(p_image), view(p_view), memory(p_memory), format(p_format),
-          width(p_width), height(p_height), device(&p_device) {}
+          layout(p_layout), width(p_width), height(p_height),
+          device(&p_device) {}
 
     NO_COPY(vulkan_texture_t);
 
@@ -74,10 +77,8 @@ struct vulkan_texture_t {
     ) const -> void;
 
     auto transition_layout(
-        const command_pool_t &command_pool,
-        VkImageLayout old_layout,
-        VkImageLayout new_layout
-    ) const -> void;
+        const command_pool_t &command_pool, VkImageLayout new_layout
+    ) -> void;
 
     static auto get_set_layout_binding(
         uint32_t binding,

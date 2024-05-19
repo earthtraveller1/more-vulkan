@@ -15,6 +15,7 @@ vulkan_texture_t::vulkan_texture_t(vulkan_texture_t &&other) noexcept {
     view = other.view;
     memory = other.memory;
     format = other.format;
+    layout = other.layout;
     width = other.width;
     height = other.height;
     device = other.device;
@@ -23,6 +24,7 @@ vulkan_texture_t::vulkan_texture_t(vulkan_texture_t &&other) noexcept {
     other.view = VK_NULL_HANDLE;
     other.memory = VK_NULL_HANDLE;
     other.format = VK_FORMAT_UNDEFINED;
+    other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
     other.width = 0;
     other.height = 0;
     other.device = nullptr;
@@ -34,6 +36,7 @@ auto vulkan_texture_t::operator=(vulkan_texture_t &&other) noexcept
     std::swap(view, other.view);
     std::swap(memory, other.memory);
     std::swap(format, other.format);
+    std::swap(layout, other.layout);
     std::swap(width, other.width);
     std::swap(height, other.height);
     std::swap(device, other.device);
@@ -132,6 +135,7 @@ auto vulkan_texture_t::create(
         image_view,
         memory,
         format,
+        VK_IMAGE_LAYOUT_UNDEFINED,
         width,
         height,
         device,
@@ -224,7 +228,16 @@ auto vulkan_texture_t::create_depth_attachment(
         vkCreateImageView(device.logical, &view_create_info, nullptr, &view)
     );
 
-    return {image, view, memory, *format, width, height, device};
+    return {
+        image,
+        view,
+        memory,
+        *format,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        width,
+        height,
+        device
+    };
 }
 
 auto vulkan_texture_t::load_from_file(
@@ -243,9 +256,7 @@ auto vulkan_texture_t::load_from_file(
     auto texture = create(device, width, height);
 
     texture.transition_layout(
-        command_pool,
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+        command_pool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     );
 
     auto staging_buffer =
@@ -261,9 +272,7 @@ auto vulkan_texture_t::load_from_file(
     stbi_image_free(data);
 
     texture.transition_layout(
-        command_pool,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        command_pool, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
 
     return texture;
@@ -348,10 +357,8 @@ auto vulkan_texture_t::copy_from_buffer(
 }
 
 auto vulkan_texture_t::transition_layout(
-    const command_pool_t &command_pool,
-    VkImageLayout p_old_layout,
-    VkImageLayout p_new_layout
-) const -> void {
+    const command_pool_t &command_pool, VkImageLayout p_new_layout
+) -> void {
     const auto command_buffer = command_pool.allocate_buffer();
 
     const VkCommandBufferBeginInfo begin_info{
@@ -367,7 +374,7 @@ auto vulkan_texture_t::transition_layout(
         VkAccessFlags dst_access_mask;
         VkPipelineStageFlags dst_stage_mask;
     } masks = [&]() -> masks_t {
-        if (p_old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
+        if (this->layout == VK_IMAGE_LAYOUT_UNDEFINED &&
             p_new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
             return {
                 .src_access_mask = 0,
@@ -375,14 +382,14 @@ auto vulkan_texture_t::transition_layout(
                 .dst_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
                 .dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT,
             };
-        } else if (p_old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && p_new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        } else if (this->layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && p_new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
             return {
                 .src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
                 .src_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT,
                 .dst_access_mask = VK_ACCESS_SHADER_READ_BIT,
                 .dst_stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             };
-        } else if (p_old_layout == VK_IMAGE_LAYOUT_UNDEFINED && p_new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+        } else if (this->layout == VK_IMAGE_LAYOUT_UNDEFINED && p_new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
             return {
                 .src_access_mask = 0,
                 .src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -391,7 +398,11 @@ auto vulkan_texture_t::transition_layout(
                 .dst_stage_mask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
             };
         } else {
-            throw std::runtime_error("unsupported layout transition.");
+            throw std::runtime_error(
+                std::string("unsupported layout transition.") +
+                std::to_string(this->layout) + " -> " +
+                std::to_string(p_new_layout)
+            );
         }
     }();
 
@@ -399,7 +410,7 @@ auto vulkan_texture_t::transition_layout(
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = masks.src_access_mask, // TODO
         .dstAccessMask = masks.dst_access_mask, // TODO
-        .oldLayout = p_old_layout,
+        .oldLayout = this->layout,
         .newLayout = p_new_layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -456,5 +467,7 @@ auto vulkan_texture_t::transition_layout(
     VK_ERROR(
         vkQueueSubmit(device->graphics_queue, 1, &submit_info, VK_NULL_HANDLE)
     );
+
+    this->layout = p_new_layout;
 }
 } // namespace mv
