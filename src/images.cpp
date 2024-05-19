@@ -350,6 +350,13 @@ auto vulkan_texture_t::transition_layout(
                 .dst_access_mask = VK_ACCESS_SHADER_READ_BIT,
                 .dst_stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             };
+        } else if (p_old_layout == VK_IMAGE_LAYOUT_UNDEFINED && p_new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+            return {
+                .src_access_mask = 0,
+                .src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                .dst_access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .dst_stage_mask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            };
         } else {
             throw std::runtime_error("unsupported layout transition.");
         }
@@ -366,7 +373,25 @@ auto vulkan_texture_t::transition_layout(
         .image = image,
         .subresourceRange =
             {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .aspectMask = [&]() -> VkImageAspectFlags {
+                    if (p_new_layout ==
+                        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+
+                        const auto has_stencil_component =
+                            format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+                            format == VK_FORMAT_D24_UNORM_S8_UINT;
+
+                        if (has_stencil_component) {
+                            return VK_IMAGE_ASPECT_DEPTH_BIT |
+                                   VK_IMAGE_ASPECT_STENCIL_BIT;
+                        } else {
+                            return VK_IMAGE_ASPECT_DEPTH_BIT;
+                        }
+
+                    } else {
+                        return VK_IMAGE_ASPECT_COLOR_BIT;
+                    }
+                }(),
                 .baseMipLevel = 0,
                 .levelCount = 1,
                 .baseArrayLayer = 0,
