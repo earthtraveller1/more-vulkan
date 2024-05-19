@@ -30,11 +30,11 @@ struct vulkan_device_t {
 
     // May throw vulkan_exception
     static auto create(VkInstance p_instance, VkSurfaceKHR p_surface)
-        -> vulkan_device_t; 
+        -> vulkan_device_t;
 
     inline ~vulkan_device_t() {
         vkDestroyDevice(logical, nullptr);
     }
 };
-}
 
+} // namespace mv
