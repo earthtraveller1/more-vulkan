@@ -18,7 +18,9 @@ struct vulkan_texture_t {
     uint32_t width;
     uint32_t height;
 
-    const vulkan_device_t &device;
+    const vulkan_device_t *device;
+
+    vulkan_texture_t() = default;
 
     vulkan_texture_t(
         VkImage p_image,
@@ -30,10 +32,12 @@ struct vulkan_texture_t {
         const vulkan_device_t &p_device
     )
         : image(p_image), view(p_view), memory(p_memory), format(p_format),
-          width(p_width), height(p_height), device(p_device) {}
+          width(p_width), height(p_height), device(&p_device) {}
 
     NO_COPY(vulkan_texture_t);
-    YES_MOVE(vulkan_texture_t);
+
+    vulkan_texture_t(vulkan_texture_t &&other) noexcept;
+    auto operator=(vulkan_texture_t &&other) noexcept -> vulkan_texture_t &;
 
     static auto
     create(const vulkan_device_t &device, uint32_t width, uint32_t height)
@@ -99,9 +103,9 @@ struct vulkan_texture_t {
     }
 
     inline ~vulkan_texture_t() noexcept {
-        vkDestroyImageView(device.logical, view, nullptr);
-        vkDestroyImage(device.logical, image, nullptr);
-        vkFreeMemory(device.logical, memory, nullptr);
+        vkDestroyImageView(device->logical, view, nullptr);
+        vkDestroyImage(device->logical, image, nullptr);
+        vkFreeMemory(device->logical, memory, nullptr);
     }
 };
 } // namespace mv

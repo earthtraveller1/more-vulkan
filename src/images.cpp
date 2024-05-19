@@ -9,6 +9,38 @@
 #include "images.hpp"
 
 namespace mv {
+
+vulkan_texture_t::vulkan_texture_t(vulkan_texture_t &&other) noexcept {
+    image = other.image;
+    view = other.view;
+    memory = other.memory;
+    format = other.format;
+    width = other.width;
+    height = other.height;
+    device = other.device;
+
+    other.image = VK_NULL_HANDLE;
+    other.view = VK_NULL_HANDLE;
+    other.memory = VK_NULL_HANDLE;
+    other.format = VK_FORMAT_UNDEFINED;
+    other.width = 0;
+    other.height = 0;
+    other.device = nullptr;
+}
+
+auto vulkan_texture_t::operator=(vulkan_texture_t &&other) noexcept
+    -> vulkan_texture_t & {
+    std::swap(image, other.image);
+    std::swap(view, other.view);
+    std::swap(memory, other.memory);
+    std::swap(format, other.format);
+    std::swap(width, other.width);
+    std::swap(height, other.height);
+    std::swap(device, other.device);
+
+    return *this;
+}
+
 auto vulkan_texture_t::create(
     const vulkan_device_t &device, uint32_t width, uint32_t height
 ) -> vulkan_texture_t {
@@ -258,11 +290,11 @@ auto vulkan_texture_t::create_sampler() const -> sampler_t {
     };
 
     VkSampler sampler;
-    VK_ERROR(
-        vkCreateSampler(device.logical, &sampler_create_info, nullptr, &sampler)
-    );
+    VK_ERROR(vkCreateSampler(
+        device->logical, &sampler_create_info, nullptr, &sampler
+    ));
 
-    return {sampler, device};
+    return {sampler, *device};
 }
 
 auto vulkan_texture_t::copy_from_buffer(
@@ -311,7 +343,7 @@ auto vulkan_texture_t::copy_from_buffer(
     };
 
     VK_ERROR(
-        vkQueueSubmit(device.graphics_queue, 1, &submit_info, VK_NULL_HANDLE)
+        vkQueueSubmit(device->graphics_queue, 1, &submit_info, VK_NULL_HANDLE)
     );
 }
 
@@ -354,7 +386,8 @@ auto vulkan_texture_t::transition_layout(
             return {
                 .src_access_mask = 0,
                 .src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                .dst_access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .dst_access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                                   VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                 .dst_stage_mask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
             };
         } else {
@@ -421,7 +454,7 @@ auto vulkan_texture_t::transition_layout(
     };
 
     VK_ERROR(
-        vkQueueSubmit(device.graphics_queue, 1, &submit_info, VK_NULL_HANDLE)
+        vkQueueSubmit(device->graphics_queue, 1, &submit_info, VK_NULL_HANDLE)
     );
 }
 } // namespace mv
