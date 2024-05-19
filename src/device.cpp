@@ -227,3 +227,25 @@ auto vulkan_device_t::create(VkInstance p_instance, VkSurfaceKHR p_surface)
 
     return device;
 }
+
+auto mv::get_memory_type_index(
+    const vulkan_device_t &device,
+    uint32_t type_bits,
+    VkMemoryPropertyFlags property_flags
+) -> uint32_t {
+    VkPhysicalDeviceMemoryProperties memory_properties;
+    vkGetPhysicalDeviceMemoryProperties(device.physical, &memory_properties);
+
+    for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
+        const auto has_type_bit = (type_bits & (1 << i)) != 0;
+
+        const auto has_property_flags =
+            (property_flags & property_flags) == property_flags;
+
+        if (has_type_bit && has_property_flags) {
+            return i;
+        }
+    }
+
+    throw no_adequate_memory_type_exception{};
+}

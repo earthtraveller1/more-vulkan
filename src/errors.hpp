@@ -37,6 +37,12 @@ struct no_adequate_swapchain_settings_exception : public std::exception {
     }
 };
 
+struct no_adequate_memory_type_exception : public std::exception {
+    virtual const char* what() const noexcept override {
+        return "Could not find adequate memory type.";
+    }
+};
+
 struct file_exception : public std::exception {
     enum class type_t {
         open,

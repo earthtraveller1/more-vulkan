@@ -37,4 +37,10 @@ struct vulkan_device_t {
     }
 };
 
+auto get_memory_type_index(
+    const vulkan_device_t &device,
+    uint32_t type_bits,
+    VkMemoryPropertyFlags property_flags
+) -> uint32_t;
+
 } // namespace mv
