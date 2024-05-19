@@ -10,8 +10,13 @@ layout (binding = 1) uniform sampler2D texture_sampler;
 
 layout (location = 0) in float x_pos;
 layout (location = 1) in vec2 uv;
+layout (location = 2) in vec4 view_position;
 
 void main()
 {
-    frag_color = texture(texture_sampler, uv) * vec4(1.0, sin(( push_constants.t + x_pos ) * 10), 0.0, 1.0);
+    float distance = length(view_position.xyz);
+    vec4 color_bands = vec4(1.0, sin(( push_constants.t + x_pos ) * 10), 0.0, 1.0);
+    vec4 texture_color = texture(texture_sampler, uv);
+
+    frag_color = texture_color / ( 10.0 * distance * distance + 100.0 );
 }

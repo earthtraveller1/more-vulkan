@@ -36,14 +36,17 @@ auto append_cube_face_to_mesh(
     axis_t p_axis,
     bool p_negate,
     bool p_backface,
+    float p_first_offset,
+    float p_second_offset,
     std::vector<mv::vertex_t> &p_vertices,
-    std::vector<uint32_t> &p_indices
+    std::vector<uint32_t> &p_indices,
+    bool p_flip_uv = false
 ) -> void {
     const float values[][2]{
-        {0.5f, -0.5f},
-        {0.5f, 0.5f},
-        {-0.5f, 0.5f},
-        {-0.5f, -0.5f},
+        {0.5f + p_first_offset, -0.5f + p_second_offset},
+        {0.5f + p_first_offset, 0.5f + p_second_offset},
+        {-0.5f + p_first_offset, 0.5f + p_second_offset},
+        {-0.5f + p_first_offset, -0.5f + p_second_offset},
     };
 
     const float uvs[][2]{
@@ -51,6 +54,13 @@ auto append_cube_face_to_mesh(
         {1.0f, 1.0f},
         {0.0f, 1.0f},
         {0.0f, 0.0f},
+    };
+
+    const float flipped_uvs[][2]{
+        {1.0f, 1.0f},
+        {1.0f, 0.0f},
+        {0.0f, 0.0f},
+        {0.0f, 1.0f},
     };
 
     const float third_value = p_negate ? -0.5f : 0.5f;
@@ -93,10 +103,17 @@ auto append_cube_face_to_mesh(
             }
         }
 
-        p_vertices.push_back({
-            .position = glm::vec3{x_value, y_value, z_value},
-            .uv = glm::vec2{uvs[i][0], uvs[i][1]},
-        });
+        if (p_flip_uv) {
+            p_vertices.push_back({
+                .position = glm::vec3{x_value, y_value, z_value},
+                .uv = glm::vec2{flipped_uvs[i][0], flipped_uvs[i][1]},
+            });
+        } else {
+            p_vertices.push_back({
+                .position = glm::vec3{x_value, y_value, z_value},
+                .uv = glm::vec2{uvs[i][0], uvs[i][1]},
+            });
+        }
     }
 
     for (auto index : indices) {
@@ -173,12 +190,28 @@ int main(int p_argc, const char *const *const p_argv) try {
     std::vector<mv::vertex_t> vertices;
     std::vector<uint32_t> indices;
 
-    append_cube_face_to_mesh(axis_t::z, false, false, vertices, indices);
+    /* append_cube_face_to_mesh(axis_t::z, false, false, vertices, indices);
     append_cube_face_to_mesh(axis_t::z, true, true, vertices, indices);
     append_cube_face_to_mesh(axis_t::x, false, false, vertices, indices);
     append_cube_face_to_mesh(axis_t::x, true, true, vertices, indices);
     append_cube_face_to_mesh(axis_t::y, false, false, vertices, indices);
-    append_cube_face_to_mesh(axis_t::y, true, true, vertices, indices);
+    append_cube_face_to_mesh(axis_t::y, true, true, vertices, indices); */
+
+    for (float offset = -5.0f; offset < 5.0f; offset += 1.0f) {
+        append_cube_face_to_mesh(
+            axis_t::x, false, true, offset, 0.0f, vertices, indices, true
+        );
+        append_cube_face_to_mesh(
+            axis_t::x, true, false, offset, 0.0f, vertices, indices 
+        );
+
+        append_cube_face_to_mesh(
+            axis_t::y, true, false, 0.0f, offset, vertices, indices
+        );
+        append_cube_face_to_mesh(
+            axis_t::y, false, true, 0.0f, offset, vertices, indices
+        );
+    }
 
     auto vertex_buffer = mv::vertex_buffer_t::create(
         device, vertices.size() * sizeof(mv::vertex_t)
@@ -352,7 +385,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         VK_ERROR(vkBeginCommandBuffer(command_buffer, &begin_info));
 
         const VkClearValue clear_color{
-            .color = {.float32 = {0.0f, 0.01f, 0.01f, 1.0f}},
+            .color = {.float32 = {0.0f, 0.00f, 0.00f, 1.0f}},
         };
 
         const VkClearValue clear_depth{
