@@ -202,7 +202,7 @@ int main(int p_argc, const char *const *const p_argv) try {
             axis_t::x, false, true, offset, 0.0f, vertices, indices, true
         );
         append_cube_face_to_mesh(
-            axis_t::x, true, false, offset, 0.0f, vertices, indices 
+            axis_t::x, true, false, offset, 0.0f, vertices, indices
         );
 
         append_cube_face_to_mesh(
@@ -309,14 +309,48 @@ int main(int p_argc, const char *const *const p_argv) try {
     while (!glfwWindowShouldClose(window.window)) {
         const auto start_time = glfwGetTime();
 
+        const double speed = 1.0;
+        const auto bob_rate = window.height * 0.00000025;
+        const auto bob_factor = time * 15.0;
         if (glfwGetKey(window.window, GLFW_KEY_W)) {
-            ubo.view =
-                glm::translate(ubo.view, glm::vec3(0.0, 0.0, 5.0 * delta_time));
+            ubo.view = glm::translate(
+                ubo.view,
+                glm::vec3(
+                    0.0, std::cos(bob_factor) * bob_rate, speed * delta_time
+                )
+            );
+
+            time += delta_time;
         }
         if (glfwGetKey(window.window, GLFW_KEY_S)) {
             ubo.view = glm::translate(
-                ubo.view, glm::vec3(0.0, 0.0, -5.0 * delta_time)
+                ubo.view,
+                glm::vec3(
+                    0.0, std::cos(bob_factor) * bob_rate, -speed * delta_time
+                )
             );
+
+            time += delta_time;
+        }
+        if (glfwGetKey(window.window, GLFW_KEY_A)) {
+            ubo.view = glm::translate(
+                ubo.view,
+                glm::vec3(
+                    speed * delta_time, std::cos(bob_factor) * bob_rate, 0.0
+                )
+            );
+
+            time += delta_time;
+        }
+        if (glfwGetKey(window.window, GLFW_KEY_D)) {
+            ubo.view = glm::translate(
+                ubo.view,
+                glm::vec3(
+                    -speed * delta_time, std::cos(bob_factor) * bob_rate, 0.0
+                )
+            );
+
+            time += delta_time;
         }
 
         ubo.projection = glm::perspective(
@@ -326,15 +360,6 @@ int main(int p_argc, const char *const *const p_argv) try {
             0.1f,
             100.0f
         );
-
-        if (glfwGetKey(window.window, GLFW_KEY_R)) {
-            ubo.model = glm::rotate(
-                glm::mat4(1.0f),
-                static_cast<float>(time),
-                glm::vec3(0.0f, 1.0f, 0.5f)
-            );
-            time += delta_time;
-        }
 
         vkWaitForFences(
             device.logical, 1, &frame_fence.fence, VK_TRUE, UINT64_MAX
