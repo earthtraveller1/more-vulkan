@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "buffers.hpp"
+#include "cameras.hpp"
 #include "commands.hpp"
 #include "device.hpp"
 #include "enumerate.hpp"
@@ -292,6 +293,13 @@ int main(int p_argc, const char *const *const p_argv) try {
         .model = glm::mat4(1.0f)
     };
 
+    mv::first_person_camera_t camera{
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, -1.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(1.0f, 0.0f, 0.0f)
+    };
+
     double delta_time = 0.0;
     double time = 0.0;
 
@@ -302,46 +310,41 @@ int main(int p_argc, const char *const *const p_argv) try {
         const double speed = 1.0;
         const auto bob_rate = window.height * 0.00000025;
         const auto bob_factor = time * 15.0;
+        auto should_update_time = false;
         if (glfwGetKey(window.window, GLFW_KEY_W)) {
-            ubo.view = glm::translate(
-                ubo.view,
-                glm::vec3(
-                    0.0, std::cos(bob_factor) * bob_rate, speed * delta_time
-                )
+            camera.position += glm::vec3(
+                0.0, std::cos(bob_factor) * bob_rate, -speed * delta_time
             );
 
-            time += delta_time;
+            should_update_time = true;
         }
         if (glfwGetKey(window.window, GLFW_KEY_S)) {
-            ubo.view = glm::translate(
-                ubo.view,
-                glm::vec3(
-                    0.0, std::cos(bob_factor) * bob_rate, -speed * delta_time
-                )
+            camera.position += glm::vec3(
+                0.0, std::cos(bob_factor) * bob_rate, speed * delta_time
             );
 
-            time += delta_time;
+            should_update_time = true;
         }
         if (glfwGetKey(window.window, GLFW_KEY_A)) {
-            ubo.view = glm::translate(
-                ubo.view,
-                glm::vec3(
-                    speed * delta_time, std::cos(bob_factor) * bob_rate, 0.0
-                )
+            camera.position += glm::vec3(
+                -speed * delta_time, std::cos(bob_factor) * bob_rate, 0.0
             );
 
-            time += delta_time;
+            should_update_time = true;
         }
         if (glfwGetKey(window.window, GLFW_KEY_D)) {
-            ubo.view = glm::translate(
-                ubo.view,
-                glm::vec3(
-                    -speed * delta_time, std::cos(bob_factor) * bob_rate, 0.0
-                )
+            camera.position += glm::vec3(
+                speed * delta_time, std::cos(bob_factor) * bob_rate, 0.0
             );
 
+            should_update_time = true;
+        }
+
+        if (should_update_time) {
             time += delta_time;
         }
+
+        ubo.view = camera.look_at();
 
         ubo.projection = glm::perspective(
             45.0f,
