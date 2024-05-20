@@ -15,14 +15,8 @@ layout (location = 3) in vec3 normal;
 
 void main()
 {
-    float distance = length(view_position.xyz);
     vec4 color_bands = vec4(1.0, sin(( push_constants.t + x_pos ) * 10), 0.0, 1.0);
     vec4 texture_color = texture(texture_sampler, uv);
 
-    vec3 light_origin = vec3(0.0, 1.0, 0.0);
-    vec3 light_direction = normalize(light_origin - view_position.xyz);
-    float brightness = abs(dot(light_direction, normal));
-
-    frag_color = texture_color / ( 10.0 * distance * distance + 100.0 ) + color_bands * ( brightness / 10.0);
-    // frag_color = vec4(brightness, brightness, brightness, 1.0);
+    frag_color = normalize(color_bands * texture_color);
 }

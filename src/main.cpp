@@ -196,28 +196,12 @@ int main(int p_argc, const char *const *const p_argv) try {
     std::vector<mv::vertex_t> vertices;
     std::vector<uint32_t> indices;
 
-    /* append_cube_face_to_mesh(axis_t::z, false, false, vertices, indices);
-    append_cube_face_to_mesh(axis_t::z, true, true, vertices, indices);
-    append_cube_face_to_mesh(axis_t::x, false, false, vertices, indices);
-    append_cube_face_to_mesh(axis_t::x, true, true, vertices, indices);
-    append_cube_face_to_mesh(axis_t::y, false, false, vertices, indices);
-    append_cube_face_to_mesh(axis_t::y, true, true, vertices, indices); */
-
-    for (float offset = -5.0f; offset < 5.0f; offset += 1.0f) {
-        append_cube_face_to_mesh(
-            axis_t::x, false, true, offset, 0.0f, vertices, indices, true
-        );
-        append_cube_face_to_mesh(
-            axis_t::x, true, false, offset, 0.0f, vertices, indices
-        );
-
-        append_cube_face_to_mesh(
-            axis_t::y, true, false, 0.0f, offset, vertices, indices
-        );
-        append_cube_face_to_mesh(
-            axis_t::y, false, true, 0.0f, offset, vertices, indices
-        );
-    }
+    append_cube_face_to_mesh(
+        axis_t::y, false, true, 0.0f, 0.0f, vertices, indices
+    );
+    append_cube_face_to_mesh(
+        axis_t::z, true, false, 0.0f, 0.0f, vertices, indices
+    );
 
     auto vertex_buffer = mv::vertex_buffer_t::create(
         device, vertices.size() * sizeof(mv::vertex_t)
