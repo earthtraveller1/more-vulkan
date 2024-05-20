@@ -147,6 +147,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto instance = mv::vulkan_instance_t::create(enable_validation);
     auto window = mv::window_t::create(instance, "Hello!", 1280, 720);
     window.set_user_pointer();
+    glfwSetInputMode(window.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     const auto device = mv::vulkan_device_t::create(instance, window.surface);
     auto swapchain = mv::swapchain_t::create(device, window);
 
@@ -303,45 +304,59 @@ int main(int p_argc, const char *const *const p_argv) try {
     double delta_time = 0.0;
     double time = 0.0;
 
+    double previous_mouse_x = 0.0;
+    double previous_mouse_y = 0.0;
+    bool has_mouse_set = false;
+
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
         const auto start_time = glfwGetTime();
 
-        const double speed = 1.0;
+        const float speed = 1.0;
         const auto bob_rate = window.height * 0.00000025;
         const auto bob_factor = time * 15.0;
         auto should_update_time = false;
+        const auto move_direction = glm::vec3(camera.direction.x, 0.0f, camera.direction.z);
         if (glfwGetKey(window.window, GLFW_KEY_W)) {
-            camera.position += glm::vec3(
-                0.0, std::cos(bob_factor) * bob_rate, -speed * delta_time
-            );
+            camera.position += (float)delta_time * speed * move_direction;
 
             should_update_time = true;
         }
         if (glfwGetKey(window.window, GLFW_KEY_S)) {
-            camera.position += glm::vec3(
-                0.0, std::cos(bob_factor) * bob_rate, speed * delta_time
-            );
+            camera.position -= (float)delta_time * speed * move_direction;
 
             should_update_time = true;
         }
         if (glfwGetKey(window.window, GLFW_KEY_A)) {
-            camera.position += glm::vec3(
-                -speed * delta_time, std::cos(bob_factor) * bob_rate, 0.0
-            );
+            camera.position -= (float)delta_time * speed * camera.right;
 
             should_update_time = true;
         }
         if (glfwGetKey(window.window, GLFW_KEY_D)) {
-            camera.position += glm::vec3(
-                speed * delta_time, std::cos(bob_factor) * bob_rate, 0.0
-            );
+            camera.position += (float)delta_time * speed * camera.right;
 
             should_update_time = true;
         }
 
+        if (!has_mouse_set) {
+            glfwGetCursorPos(
+                window.window, &previous_mouse_x, &previous_mouse_y
+            );
+            has_mouse_set = true;
+        }
+
+        double mouse_x, mouse_y;
+        const auto mouse_sensitivity = 0.1;
+        glfwGetCursorPos(window.window, &mouse_x, &mouse_y);
+        camera.yaw += (mouse_x - previous_mouse_x) * mouse_sensitivity;
+        camera.pitch -= (previous_mouse_y - mouse_y) * mouse_sensitivity;
+        camera.update_vectors();
+        previous_mouse_x = mouse_x;
+        previous_mouse_y = mouse_y;
+
         if (should_update_time) {
             time += delta_time;
+            camera.position.y += std::cos(bob_factor) * bob_rate;
         }
 
         ubo.view = camera.look_at();
