@@ -71,12 +71,14 @@ auto append_cube_face_to_mesh(
 
     for (int i = 0; i < 4; i++) {
         float x_value, y_value, z_value;
+        float normal_x = 0.0f, normal_y = 0.0f, normal_z = 0.0f;
 
         switch (p_axis) {
         case axis_t::x:
             z_value = -values[i][0];
             y_value = values[i][1];
             x_value = third_value;
+            normal_x = 1.0f;
 
             if (p_backface) {
                 y_value = -y_value;
@@ -87,6 +89,7 @@ auto append_cube_face_to_mesh(
             x_value = values[i][0];
             z_value = -values[i][1];
             y_value = third_value;
+            normal_y = 1.0f;
 
             if (p_backface) {
                 z_value = -z_value;
@@ -97,6 +100,7 @@ auto append_cube_face_to_mesh(
             x_value = values[i][0];
             y_value = values[i][1];
             z_value = third_value;
+            normal_z = 1.0f;
 
             if (p_backface) {
                 x_value = -x_value;
@@ -107,11 +111,13 @@ auto append_cube_face_to_mesh(
             p_vertices.push_back({
                 .position = glm::vec3{x_value, y_value, z_value},
                 .uv = glm::vec2{flipped_uvs[i][0], flipped_uvs[i][1]},
+                .normal = glm::vec3{normal_x, normal_y, normal_z},
             });
         } else {
             p_vertices.push_back({
                 .position = glm::vec3{x_value, y_value, z_value},
                 .uv = glm::vec2{uvs[i][0], uvs[i][1]},
+                .normal = glm::vec3{normal_x, normal_y, normal_z},
             });
         }
     }
