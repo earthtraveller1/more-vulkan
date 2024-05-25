@@ -208,7 +208,7 @@ int main(int p_argc, const char *const *const p_argv) try {
                 0, 1, VK_SHADER_STAGE_VERTEX_BIT
             ),
             mv::vulkan_texture_t::get_set_layout_binding(
-                1, 1, VK_SHADER_STAGE_FRAGMENT_BIT
+                1, 2, VK_SHADER_STAGE_FRAGMENT_BIT
             ),
         }
     );
@@ -230,8 +230,8 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto command_buffer = command_pool.allocate_buffer();
 
-    const auto cube =
-        mesh_t::create_cube(0.0f, 1.0, glm::vec3(0.0f, 0.0f, -4.0f));
+    auto cube = mesh_t::create_cube(0.0f, 1.0, glm::vec3(0.0f, 0.0f, 2.0f));
+    cube.append_cube(1.0f, 1.0, glm::vec3(0.0f, 2.0f, 1.0f));
 
     auto vertex_buffer = mv::vertex_buffer_t::create(
         device, cube.vertices.size() * sizeof(mv::vertex_t)
@@ -268,13 +268,17 @@ int main(int p_argc, const char *const *const p_argv) try {
             },
             VkDescriptorPoolSize{
                 .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = 1,
+                .descriptorCount = 2,
             }
         }
     );
 
     const auto texture = mv::vulkan_texture_t::load_from_file(
         device, command_pool, "textures/can-pooper.png"
+    );
+
+    const auto another_texture = mv::vulkan_texture_t::load_from_file(
+        device, command_pool, "textures/neng-face.jpg"
     );
 
     const auto texture_sampler = texture.create_sampler();
@@ -286,6 +290,8 @@ int main(int p_argc, const char *const *const p_argv) try {
         const auto buffer_info = uniform_buffer.get_descriptor_buffer_info();
         const auto image_info =
             texture.get_descriptor_image_info(texture_sampler.sampler);
+        const auto image2_info =
+            another_texture.get_descriptor_image_info(texture_sampler.sampler);
 
         const std::array set_writes{
             VkWriteDescriptorSet{
@@ -305,6 +311,15 @@ int main(int p_argc, const char *const *const p_argv) try {
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .pImageInfo = &image_info,
+            },
+            VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 1,
+                .dstArrayElement = 1,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &image2_info,
             }
         };
 
