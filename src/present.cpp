@@ -136,11 +136,15 @@ auto mv::swapchain_t::create(
     }
 
     std::vector<uint32_t> queue_family_indices;
+    VkSharingMode sharing_mode;
     if (p_device.graphics_family == p_device.present_family) {
         queue_family_indices.push_back(p_device.graphics_family);
+        sharing_mode = VK_SHARING_MODE_EXCLUSIVE;
     } else {
         queue_family_indices.push_back(p_device.graphics_family);
         queue_family_indices.push_back(p_device.present_family);
+
+        sharing_mode = VK_SHARING_MODE_CONCURRENT;
     }
 
     VkSwapchainCreateInfoKHR swapchain_create_info{
@@ -152,7 +156,7 @@ auto mv::swapchain_t::create(
         .imageExtent = swap_extent,
         .imageArrayLayers = 1,
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .imageSharingMode = VK_SHARING_MODE_CONCURRENT,
+        .imageSharingMode = sharing_mode,
         .queueFamilyIndexCount =
             static_cast<uint32_t>(queue_family_indices.size()),
         .pQueueFamilyIndices = queue_family_indices.data(),
@@ -163,8 +167,11 @@ auto mv::swapchain_t::create(
         .oldSwapchain = VK_NULL_HANDLE,
     };
 
-    if (swapchain_create_info.minImageCount >
-        surface_capabilities.maxImageCount) {
+    const auto no_max_image_count = surface_capabilities.maxImageCount == 0;
+    const auto exceeds_max_image_count = swapchain_create_info.minImageCount >
+                                         surface_capabilities.maxImageCount;
+
+    if (!no_max_image_count && exceeds_max_image_count) {
         swapchain_create_info.minImageCount =
             surface_capabilities.maxImageCount;
     }
