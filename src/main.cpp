@@ -31,102 +31,125 @@ struct uniform_buffer_object_t {
     glm::mat4 model;
 };
 
+using mv::vertex_t;
+
 enum class axis_t { x, y, z };
 
-auto append_cube_face_to_mesh(
-    axis_t p_axis,
-    bool p_negate,
-    bool p_backface,
-    float p_first_offset,
-    float p_second_offset,
-    std::vector<mv::vertex_t> &p_vertices,
-    std::vector<uint32_t> &p_indices,
-    bool p_flip_uv = false
-) -> void {
-    const float values[][2]{
-        {0.5f + p_first_offset, -0.5f + p_second_offset},
-        {0.5f + p_first_offset, 0.5f + p_second_offset},
-        {-0.5f + p_first_offset, 0.5f + p_second_offset},
-        {-0.5f + p_first_offset, -0.5f + p_second_offset},
-    };
+struct mesh_t {
+    std::vector<vertex_t> vertices;
+    std::vector<uint32_t> indices;
 
-    const float uvs[][2]{
-        {1.0f, 0.0f},
-        {1.0f, 1.0f},
-        {0.0f, 1.0f},
-        {0.0f, 0.0f},
-    };
+    mesh_t() = default;
 
-    const float flipped_uvs[][2]{
-        {1.0f, 1.0f},
-        {1.0f, 0.0f},
-        {0.0f, 0.0f},
-        {0.0f, 1.0f},
-    };
+    static auto create_cube() -> mesh_t {
+        mesh_t mesh;
 
-    const float third_value = p_negate ? -0.5f : 0.5f;
+        mesh.append_cube_face(axis_t::x, false, false);
+        mesh.append_cube_face(axis_t::x, true, true);
+        mesh.append_cube_face(axis_t::y, false, false);
+        mesh.append_cube_face(axis_t::y, true, true);
+        mesh.append_cube_face(axis_t::z, false, false);
+        mesh.append_cube_face(axis_t::z, true, true);
 
-    const std::array indices{0, 1, 2, 0, 2, 3};
+        return mesh;
+    }
 
-    const auto pivot_index = static_cast<uint16_t>(p_vertices.size());
+    auto append_cube_face(
+        axis_t p_axis,
+        bool p_negate,
+        bool p_backface,
+        float p_size = 1.0f,
+        float p_first_offset = 0.0f,
+        float p_second_offset = 0.0f,
+        bool p_flip_uv = false
+    ) -> void {
+        const auto half_size = p_size / 2.0f;
 
-    for (int i = 0; i < 4; i++) {
-        float x_value, y_value, z_value;
-        float normal_x = 0.0f, normal_y = 0.0f, normal_z = 0.0f;
+        const float values[][2]{
+            {half_size + p_first_offset, -half_size + p_second_offset},
+            {half_size + p_first_offset, half_size + p_second_offset},
+            {-half_size + p_first_offset, half_size + p_second_offset},
+            {-half_size + p_first_offset, -half_size + p_second_offset},
+        };
 
-        switch (p_axis) {
-        case axis_t::x:
-            z_value = -values[i][0];
-            y_value = values[i][1];
-            x_value = third_value;
-            normal_x = 1.0f;
+        const float uvs[][2]{
+            {1.0f, 0.0f},
+            {1.0f, 1.0f},
+            {0.0f, 1.0f},
+            {0.0f, 0.0f},
+        };
 
-            if (p_backface) {
-                y_value = -y_value;
+        const float flipped_uvs[][2]{
+            {1.0f, 1.0f},
+            {1.0f, 0.0f},
+            {0.0f, 0.0f},
+            {0.0f, 1.0f},
+        };
+
+        const float third_value = p_negate ? -0.5f : 0.5f;
+
+        const std::array new_indices{0, 1, 2, 0, 2, 3};
+
+        const auto pivot_index = static_cast<uint16_t>(vertices.size());
+
+        for (int i = 0; i < 4; i++) {
+            float x_value, y_value, z_value;
+            float normal_x = 0.0f, normal_y = 0.0f, normal_z = 0.0f;
+
+            switch (p_axis) {
+            case axis_t::x:
+                z_value = -values[i][0];
+                y_value = values[i][1];
+                x_value = third_value;
+                normal_x = 1.0f;
+
+                if (p_backface) {
+                    y_value = -y_value;
+                }
+
+                break;
+            case axis_t::y:
+                x_value = values[i][0];
+                z_value = -values[i][1];
+                y_value = third_value;
+                normal_y = 1.0f;
+
+                if (p_backface) {
+                    z_value = -z_value;
+                }
+
+                break;
+            case axis_t::z:
+                x_value = values[i][0];
+                y_value = values[i][1];
+                z_value = third_value;
+                normal_z = 1.0f;
+
+                if (p_backface) {
+                    x_value = -x_value;
+                }
             }
 
-            break;
-        case axis_t::y:
-            x_value = values[i][0];
-            z_value = -values[i][1];
-            y_value = third_value;
-            normal_y = 1.0f;
-
-            if (p_backface) {
-                z_value = -z_value;
-            }
-
-            break;
-        case axis_t::z:
-            x_value = values[i][0];
-            y_value = values[i][1];
-            z_value = third_value;
-            normal_z = 1.0f;
-
-            if (p_backface) {
-                x_value = -x_value;
+            if (p_flip_uv) {
+                vertices.push_back({
+                    .position = glm::vec3{x_value, y_value, z_value},
+                    .uv = glm::vec2{flipped_uvs[i][0], flipped_uvs[i][1]},
+                    .normal = glm::vec3{normal_x, normal_y, normal_z},
+                });
+            } else {
+                vertices.push_back({
+                    .position = glm::vec3{x_value, y_value, z_value},
+                    .uv = glm::vec2{uvs[i][0], uvs[i][1]},
+                    .normal = glm::vec3{normal_x, normal_y, normal_z},
+                });
             }
         }
 
-        if (p_flip_uv) {
-            p_vertices.push_back({
-                .position = glm::vec3{x_value, y_value, z_value},
-                .uv = glm::vec2{flipped_uvs[i][0], flipped_uvs[i][1]},
-                .normal = glm::vec3{normal_x, normal_y, normal_z},
-            });
-        } else {
-            p_vertices.push_back({
-                .position = glm::vec3{x_value, y_value, z_value},
-                .uv = glm::vec2{uvs[i][0], uvs[i][1]},
-                .normal = glm::vec3{normal_x, normal_y, normal_z},
-            });
+        for (auto index : new_indices) {
+            indices.push_back(pivot_index + index);
         }
     }
-
-    for (auto index : indices) {
-        p_indices.push_back(pivot_index + index);
-    }
-}
+};
 
 } // namespace
 
@@ -195,30 +218,25 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto command_buffer = command_pool.allocate_buffer();
 
-    std::vector<mv::vertex_t> vertices;
-    std::vector<uint32_t> indices;
-
-    append_cube_face_to_mesh(
-        axis_t::y, false, true, 0.0f, 0.0f, vertices, indices
-    );
-    append_cube_face_to_mesh(
-        axis_t::z, true, false, 0.0f, 0.0f, vertices, indices
-    );
+    const auto cube = mesh_t::create_cube();
 
     auto vertex_buffer = mv::vertex_buffer_t::create(
-        device, vertices.size() * sizeof(mv::vertex_t)
+        device, cube.vertices.size() * sizeof(mv::vertex_t)
     );
 
     vertex_buffer.buffer.load_using_staging(
         command_pool.pool,
-        vertices.data(),
-        vertices.size() * sizeof(mv::vertex_t)
+        cube.vertices.data(),
+        cube.vertices.size() * sizeof(mv::vertex_t)
     );
 
-    auto index_buffer =
-        mv::index_buffer_t::create(device, indices.size() * sizeof(uint32_t));
+    auto index_buffer = mv::index_buffer_t::create(
+        device, cube.indices.size() * sizeof(uint32_t)
+    );
     index_buffer.buffer.load_using_staging(
-        command_pool.pool, indices.data(), indices.size() * sizeof(uint32_t)
+        command_pool.pool,
+        cube.indices.data(),
+        cube.indices.size() * sizeof(uint32_t)
     );
 
     const auto uniform_buffer =
@@ -316,7 +334,8 @@ int main(int p_argc, const char *const *const p_argv) try {
         const auto bob_rate = window.height * 0.00000025;
         const auto bob_factor = time * 15.0;
         auto should_update_time = false;
-        const auto move_direction = glm::vec3(camera.direction.x, 0.0f, camera.direction.z);
+        const auto move_direction =
+            glm::vec3(camera.direction.x, 0.0f, camera.direction.z);
         if (glfwGetKey(window.window, GLFW_KEY_W)) {
             camera.position += (float)delta_time * speed * move_direction;
 
@@ -503,7 +522,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         );
 
         // vkCmdDraw(command_buffer, 3, 1, 0, 0);
-        vkCmdDrawIndexed(command_buffer, indices.size(), 1, 0, 0, 1);
+        vkCmdDrawIndexed(command_buffer, cube.indices.size(), 1, 0, 0, 1);
 
         vkCmdEndRenderPass(command_buffer);
         VK_ERROR(vkEndCommandBuffer(command_buffer));
