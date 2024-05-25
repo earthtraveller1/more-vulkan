@@ -353,6 +353,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     double previous_mouse_x = 0.0;
     double previous_mouse_y = 0.0;
     bool has_mouse_set = false;
+    bool should_follow_mouse = true;
 
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
@@ -383,6 +384,14 @@ int main(int p_argc, const char *const *const p_argv) try {
 
             should_update_time = true;
         }
+        if (glfwGetKey(window.window, GLFW_KEY_ESCAPE)) {
+            glfwSetInputMode(window.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            should_follow_mouse = false;
+        }
+        if (glfwGetMouseButton(window.window, GLFW_MOUSE_BUTTON_LEFT)) {
+            glfwSetInputMode(window.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            should_follow_mouse = true;
+        }
 
         if (!has_mouse_set) {
             glfwGetCursorPos(
@@ -391,14 +400,17 @@ int main(int p_argc, const char *const *const p_argv) try {
             has_mouse_set = true;
         }
 
-        double mouse_x, mouse_y;
-        const auto mouse_sensitivity = 0.1;
-        glfwGetCursorPos(window.window, &mouse_x, &mouse_y);
-        camera.yaw += (mouse_x - previous_mouse_x) * mouse_sensitivity;
-        camera.pitch -= (previous_mouse_y - mouse_y) * mouse_sensitivity;
-        camera.update_vectors();
-        previous_mouse_x = mouse_x;
-        previous_mouse_y = mouse_y;
+        if (should_follow_mouse) {
+            double mouse_x, mouse_y;
+            const auto mouse_sensitivity = 0.1;
+            glfwGetCursorPos(window.window, &mouse_x, &mouse_y);
+            camera.yaw += (mouse_x - previous_mouse_x) * mouse_sensitivity;
+            camera.pitch -= (previous_mouse_y - mouse_y) * mouse_sensitivity;
+            camera.update_vectors();
+            previous_mouse_x = mouse_x;
+            previous_mouse_y = mouse_y;
+        }
+
 
         if (should_update_time) {
             time += delta_time;
