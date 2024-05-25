@@ -73,6 +73,7 @@ struct vertex_t {
     glm::vec3 position;
     glm::vec2 uv;
     glm::vec3 normal;
+    float id;
 };
 
 constexpr VkVertexInputBindingDescription vertex_input_binding_description{
@@ -99,6 +100,12 @@ constexpr static std::array vertex_attribute_descriptions{
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(vertex_t, normal),
+    },
+    VkVertexInputAttributeDescription{
+        .location = 3,
+        .binding = 0,
+        .format = VK_FORMAT_R32_SFLOAT,
+        .offset = offsetof(vertex_t, id),
     }
 };
 
