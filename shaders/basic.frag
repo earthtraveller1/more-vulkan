@@ -19,5 +19,5 @@ void main()
     vec4 color_bands = vec4(1.0, sin(( push_constants.t + x_pos ) * 10), 0.0, 1.0);
     vec4 texture_color = texture(texture_samplers[int(id)], uv);
 
-    frag_color = texture_color;
+    frag_color = normalize(texture_color + color_bands);
 }
