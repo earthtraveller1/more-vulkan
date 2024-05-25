@@ -41,17 +41,23 @@ struct mesh_t {
 
     mesh_t() = default;
 
-    static auto create_cube() -> mesh_t {
+    static auto create_cube(
+        float p_id = 0.0f,
+        float p_size = 1.0f,
+        glm::vec3 p_position = glm::vec3(0.0f)
+    ) -> mesh_t {
         mesh_t mesh;
-
-        mesh.append_cube_face(axis_t::x, false, false);
-        mesh.append_cube_face(axis_t::x, true, true);
-        mesh.append_cube_face(axis_t::y, false, false);
-        mesh.append_cube_face(axis_t::y, true, true);
-        mesh.append_cube_face(axis_t::z, false, false);
-        mesh.append_cube_face(axis_t::z, true, true);
-
+        mesh.append_cube(p_id, p_size, p_position);
         return mesh;
+    }
+
+    auto append_cube(float p_id, float p_size, glm::vec3 p_position) -> void {
+        append_cube_face(axis_t::x, false, false, p_size, p_id, p_position);
+        append_cube_face(axis_t::x, true, true, p_size, p_id, p_position);
+        append_cube_face(axis_t::y, false, false, p_size, p_id, p_position);
+        append_cube_face(axis_t::y, true, true, p_size, p_id, p_position);
+        append_cube_face(axis_t::z, false, false, p_size, p_id, p_position);
+        append_cube_face(axis_t::z, true, true, p_size, p_id, p_position);
     }
 
     auto append_cube_face(
@@ -59,17 +65,17 @@ struct mesh_t {
         bool p_negate,
         bool p_backface,
         float p_size = 1.0f,
-        float p_first_offset = 0.0f,
-        float p_second_offset = 0.0f,
+        float p_id = 0.0f,
+        glm::vec3 p_position = glm::vec3(0.0f),
         bool p_flip_uv = false
     ) -> void {
         const auto half_size = p_size / 2.0f;
 
         const float values[][2]{
-            {half_size + p_first_offset, -half_size + p_second_offset},
-            {half_size + p_first_offset, half_size + p_second_offset},
-            {-half_size + p_first_offset, half_size + p_second_offset},
-            {-half_size + p_first_offset, -half_size + p_second_offset},
+            {half_size, -half_size},
+            {half_size, half_size},
+            {-half_size, half_size},
+            {-half_size, -half_size},
         };
 
         const float uvs[][2]{
@@ -86,7 +92,7 @@ struct mesh_t {
             {0.0f, 1.0f},
         };
 
-        const float third_value = p_negate ? -0.5f : 0.5f;
+        const float third_value = p_negate ? -half_size : half_size;
 
         const std::array new_indices{0, 1, 2, 0, 2, 3};
 
@@ -130,17 +136,23 @@ struct mesh_t {
                 }
             }
 
+            x_value += p_position.x;
+            y_value += p_position.y;
+            z_value += p_position.z;
+
             if (p_flip_uv) {
                 vertices.push_back({
                     .position = glm::vec3{x_value, y_value, z_value},
                     .uv = glm::vec2{flipped_uvs[i][0], flipped_uvs[i][1]},
                     .normal = glm::vec3{normal_x, normal_y, normal_z},
+                    .id = p_id,
                 });
             } else {
                 vertices.push_back({
                     .position = glm::vec3{x_value, y_value, z_value},
                     .uv = glm::vec2{uvs[i][0], uvs[i][1]},
                     .normal = glm::vec3{normal_x, normal_y, normal_z},
+                    .id = p_id,
                 });
             }
         }
@@ -218,7 +230,8 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto command_buffer = command_pool.allocate_buffer();
 
-    const auto cube = mesh_t::create_cube();
+    const auto cube =
+        mesh_t::create_cube(0.0f, 1.0, glm::vec3(0.0f, 0.0f, -4.0f));
 
     auto vertex_buffer = mv::vertex_buffer_t::create(
         device, cube.vertices.size() * sizeof(mv::vertex_t)
@@ -308,7 +321,7 @@ int main(int p_argc, const char *const *const p_argv) try {
             0.1f,
             100.0f
         ),
-        .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)),
+        .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 4.0f)),
         .model = glm::mat4(1.0f)
     };
 
@@ -334,8 +347,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         const auto bob_rate = window.height * 0.00000025;
         const auto bob_factor = time * 15.0;
         auto should_update_time = false;
-        const auto move_direction =
-            glm::vec3(camera.direction.x, 0.0f, camera.direction.z);
+        const auto move_direction = camera.direction;
         if (glfwGetKey(window.window, GLFW_KEY_W)) {
             camera.position += (float)delta_time * speed * move_direction;
 
