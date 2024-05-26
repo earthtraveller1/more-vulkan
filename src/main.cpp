@@ -29,6 +29,7 @@ struct uniform_buffer_object_t {
     glm::mat4 projection;
     glm::mat4 view;
     glm::mat4 model;
+    glm::vec3 light_position;
 };
 
 using mv::vertex_t;
@@ -136,6 +137,12 @@ struct mesh_t {
                 }
             }
 
+            if (p_negate) {
+                normal_x = -normal_x;
+                normal_y = -normal_y;
+                normal_z = -normal_z;
+            }
+
             x_value += p_position.x;
             y_value += p_position.y;
             z_value += p_position.z;
@@ -205,7 +212,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         device,
         std::array{
             mv::uniform_buffer_t::get_set_layout_binding(
-                0, 1, VK_SHADER_STAGE_VERTEX_BIT
+                0, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
             ),
             mv::vulkan_texture_t::get_set_layout_binding(
                 1, 2, VK_SHADER_STAGE_FRAGMENT_BIT
@@ -230,8 +237,11 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto command_buffer = command_pool.allocate_buffer();
 
+    const glm::vec3 light_position {0.0f, 0.0f, 0.0f};
+
     auto cube = mesh_t::create_cube(0.0f, 1.0, glm::vec3(0.0f, 0.0f, 2.0f));
     cube.append_cube(1.0f, 1.0, glm::vec3(0.0f, 2.0f, 1.0f));
+    cube.append_cube(2.0f, 0.5f, light_position);
 
     auto vertex_buffer = mv::vertex_buffer_t::create(
         device, cube.vertices.size() * sizeof(mv::vertex_t)
@@ -337,7 +347,8 @@ int main(int p_argc, const char *const *const p_argv) try {
             100.0f
         ),
         .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 4.0f)),
-        .model = glm::mat4(1.0f)
+        .model = glm::mat4(1.0f),
+        .light_position = light_position,
     };
 
     mv::first_person_camera_t camera{
