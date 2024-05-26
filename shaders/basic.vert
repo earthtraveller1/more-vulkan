@@ -23,6 +23,5 @@ void main() {
     uv = a_uv;
     normal = a_normal;
     id = int(a_id);
-    light_position = uniform_buffer_object.light_position;
     fragment_position = (uniform_buffer_object.model * vec4(a_position, 1.0)).xyz;
 }
