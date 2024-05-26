@@ -391,6 +391,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         if (glfwGetMouseButton(window.window, GLFW_MOUSE_BUTTON_LEFT)) {
             glfwSetInputMode(window.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             should_follow_mouse = true;
+            has_mouse_set = false;
         }
 
         if (!has_mouse_set) {

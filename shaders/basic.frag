@@ -12,12 +12,12 @@ layout (location = 0) in float x_pos;
 layout (location = 1) in vec2 uv;
 layout (location = 2) in vec4 view_position;
 layout (location = 3) in vec3 normal;
-layout (location = 4) in float id;
+layout (location = 4) flat in int id;
 
 void main()
 {
     vec4 color_bands = vec4(1.0, sin(( push_constants.t + x_pos ) * 10), 0.0, 1.0);
-    vec4 texture_color = texture(texture_samplers[int(id)], uv);
+    vec4 texture_color = texture(texture_samplers[id], uv);
 
     frag_color = normalize(texture_color + color_bands);
 }
