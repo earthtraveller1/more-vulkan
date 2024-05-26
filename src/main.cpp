@@ -30,6 +30,7 @@ struct uniform_buffer_object_t {
     glm::mat4 view;
     glm::mat4 model;
     glm::vec3 light_position;
+    glm::vec3 camera_position;
 };
 
 using mv::vertex_t;
@@ -237,11 +238,12 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto command_buffer = command_pool.allocate_buffer();
 
-    const glm::vec3 light_position {0.0f, 0.0f, 0.0f};
+    const glm::vec3 light_position {1.5f, 2.7f, -1.8f};
 
     auto cube = mesh_t::create_cube(0.0f, 1.0, glm::vec3(0.0f, 0.0f, 2.0f));
     cube.append_cube(1.0f, 1.0, glm::vec3(0.0f, 2.0f, 1.0f));
     cube.append_cube(2.0f, 0.5f, light_position);
+    cube.append_cube(3.0f, 10.0f, glm::vec3(0.0f, 10.0f, 0.0f));
 
     auto vertex_buffer = mv::vertex_buffer_t::create(
         device, cube.vertices.size() * sizeof(mv::vertex_t)
@@ -418,11 +420,20 @@ int main(int p_argc, const char *const *const p_argv) try {
             glfwGetCursorPos(window.window, &mouse_x, &mouse_y);
             camera.yaw += (mouse_x - previous_mouse_x) * mouse_sensitivity;
             camera.pitch -= (previous_mouse_y - mouse_y) * mouse_sensitivity;
+
+            if (camera.pitch > 89.0f) {
+                camera.pitch = 89.0f;
+            }
+            if (camera.pitch < -89.0f) {
+                camera.pitch = -89.0f;
+            }
+
             camera.update_vectors();
             previous_mouse_x = mouse_x;
             previous_mouse_y = mouse_y;
         }
 
+        ubo.camera_position = camera.position;
 
         if (should_update_time) {
             time += delta_time;
