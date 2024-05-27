@@ -8,11 +8,11 @@
 
 namespace mv {
 struct buffer_t;
+struct vulkan_memory_t;
 
 struct vulkan_texture_t {
     VkImage image;
     VkImageView view;
-    VkDeviceMemory memory;
     VkFormat format;
     VkImageLayout layout;
 
@@ -26,16 +26,14 @@ struct vulkan_texture_t {
     vulkan_texture_t(
         VkImage p_image,
         VkImageView p_view,
-        VkDeviceMemory p_memory,
         VkFormat p_format,
         VkImageLayout p_layout,
         uint32_t p_width,
         uint32_t p_height,
         const vulkan_device_t &p_device
     )
-        : image(p_image), view(p_view), memory(p_memory), format(p_format),
-          layout(p_layout), width(p_width), height(p_height),
-          device(&p_device) {}
+        : image(p_image), view(p_view), format(p_format), layout(p_layout),
+          width(p_width), height(p_height), device(&p_device) {}
 
     NO_COPY(vulkan_texture_t);
 
@@ -50,11 +48,10 @@ struct vulkan_texture_t {
         const vulkan_device_t &device, uint32_t width, uint32_t height
     ) -> vulkan_texture_t;
 
-    static auto load_from_file(
-        const vulkan_device_t &device,
+    auto load_from_file(
         const command_pool_t &command_pool,
         std::string_view file_path
-    ) -> vulkan_texture_t;
+    ) -> void;
 
     struct sampler_t {
         VkSampler sampler;
@@ -79,6 +76,14 @@ struct vulkan_texture_t {
     auto transition_layout(
         const command_pool_t &command_pool, VkImageLayout new_layout
     ) -> void;
+
+    auto get_memory_requirements() const -> VkMemoryRequirements {
+        VkMemoryRequirements memory_requirements;
+        vkGetImageMemoryRequirements(
+            device->logical, image, &memory_requirements
+        );
+        return memory_requirements;
+    }
 
     static auto get_set_layout_binding(
         uint32_t binding,
@@ -107,7 +112,6 @@ struct vulkan_texture_t {
         if (device != nullptr) {
             vkDestroyImageView(device->logical, view, nullptr);
             vkDestroyImage(device->logical, image, nullptr);
-            vkFreeMemory(device->logical, memory, nullptr);
         }
     }
 };

@@ -5,7 +5,6 @@
 #include "buffers.hpp"
 #include "common.hpp"
 #include "errors.hpp"
-#include "memory.hpp"
 
 #include "images.hpp"
 
@@ -14,7 +13,6 @@ namespace mv {
 vulkan_texture_t::vulkan_texture_t(vulkan_texture_t &&other) noexcept {
     image = other.image;
     view = other.view;
-    memory = other.memory;
     format = other.format;
     layout = other.layout;
     width = other.width;
@@ -23,7 +21,6 @@ vulkan_texture_t::vulkan_texture_t(vulkan_texture_t &&other) noexcept {
 
     other.image = VK_NULL_HANDLE;
     other.view = VK_NULL_HANDLE;
-    other.memory = VK_NULL_HANDLE;
     other.format = VK_FORMAT_UNDEFINED;
     other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
     other.width = 0;
@@ -35,7 +32,6 @@ auto vulkan_texture_t::operator=(vulkan_texture_t &&other) noexcept
     -> vulkan_texture_t & {
     std::swap(image, other.image);
     std::swap(view, other.view);
-    std::swap(memory, other.memory);
     std::swap(format, other.format);
     std::swap(layout, other.layout);
     std::swap(width, other.width);
@@ -70,44 +66,6 @@ auto vulkan_texture_t::create(
     VkMemoryRequirements memory_requirements;
     vkGetImageMemoryRequirements(device.logical, image, &memory_requirements);
 
-    VkPhysicalDeviceMemoryProperties memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(device.physical, &memory_properties);
-    const auto memory_property_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-    std::optional<uint32_t> memory_type_index;
-
-    for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
-        const auto property_flags =
-            memory_properties.memoryTypes[i].propertyFlags;
-
-        const auto has_type_bit =
-            (memory_requirements.memoryTypeBits & (1 << i)) != 0;
-
-        const auto has_property_flags =
-            (property_flags & memory_property_flags) == memory_property_flags;
-
-        if (has_type_bit && has_property_flags) {
-            memory_type_index = i;
-        }
-    }
-
-    if (!memory_type_index.has_value()) {
-        throw std::runtime_error("Could not find suitable memory type.");
-    }
-
-    VkMemoryAllocateInfo memory_allocate_info{
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memory_requirements.size,
-        .memoryTypeIndex = memory_type_index.value(),
-    };
-
-    VkDeviceMemory memory;
-    VK_ERROR(vkAllocateMemory(
-        device.logical, &memory_allocate_info, nullptr, &memory
-    ));
-
-    vkBindImageMemory(device.logical, image, memory, 0);
-
     const VkImageViewCreateInfo image_view_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
@@ -134,7 +92,6 @@ auto vulkan_texture_t::create(
     return {
         image,
         image_view,
-        memory,
         format,
         VK_IMAGE_LAYOUT_UNDEFINED,
         width,
@@ -189,28 +146,6 @@ auto vulkan_texture_t::create_depth_attachment(
     VK_ERROR(vkCreateImage(device.logical, &image_create_info, nullptr, &image)
     );
 
-    VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(device.logical, image, &memory_requirements);
-
-    const auto memory_type_index = get_memory_type_index(
-        device,
-        memory_requirements.memoryTypeBits,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-
-    VkMemoryAllocateInfo memory_allocate_info{
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memory_requirements.size,
-        .memoryTypeIndex = memory_type_index,
-    };
-
-    VkDeviceMemory memory;
-    VK_ERROR(vkAllocateMemory(
-        device.logical, &memory_allocate_info, nullptr, &memory
-    ));
-
-    vkBindImageMemory(device.logical, image, memory, 0);
-
     const VkImageViewCreateInfo view_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
@@ -232,7 +167,6 @@ auto vulkan_texture_t::create_depth_attachment(
     return {
         image,
         view,
-        memory,
         *format,
         VK_IMAGE_LAYOUT_UNDEFINED,
         width,
@@ -242,10 +176,9 @@ auto vulkan_texture_t::create_depth_attachment(
 }
 
 auto vulkan_texture_t::load_from_file(
-    const vulkan_device_t &device,
     const command_pool_t &command_pool,
     std::string_view file_path
-) -> vulkan_texture_t {
+) -> void {
     int width, height, channels;
     const auto data =
         stbi_load(file_path.data(), &width, &height, &channels, 4);
@@ -254,29 +187,25 @@ auto vulkan_texture_t::load_from_file(
         throw file_exception(file_exception::type_t::read, file_path);
     }
 
-    auto texture = create(device, width, height);
-
-    texture.transition_layout(
+    transition_layout(
         command_pool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     );
 
     auto staging_buffer =
-        staging_buffer_t::create(device, width * height * 4 * sizeof(uint8_t));
+        staging_buffer_t::create(*device, width * height * 4 * sizeof(uint8_t));
     memcpy(
         staging_buffer.map_memory(), data, width * height * 4 * sizeof(uint8_t)
     );
     staging_buffer.unmap_memory();
 
-    texture.copy_from_buffer(staging_buffer.buffer, command_pool);
+    copy_from_buffer(staging_buffer.buffer, command_pool);
 
-    vkQueueWaitIdle(device.graphics_queue);
+    vkQueueWaitIdle(device->graphics_queue);
     stbi_image_free(data);
 
-    texture.transition_layout(
+    transition_layout(
         command_pool, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
-
-    return texture;
 }
 
 auto vulkan_texture_t::create_sampler() const -> sampler_t {
