@@ -9,6 +9,7 @@
 #include "enumerate.hpp"
 #include "errors.hpp"
 #include "graphics.hpp"
+#include "memory.hpp"
 #include "present.hpp"
 #include "sync.hpp"
 
@@ -192,7 +193,7 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto command_pool = mv::command_pool_t::create(device);
 
-    auto depth_buffer = mv::vulkan_texture_t::create_depth_attachment(
+    auto depth_buffer = mv::vulkan_image_t::create_depth_attachment(
         device, swapchain.extent.width, swapchain.extent.height
     );
 
@@ -211,7 +212,7 @@ int main(int p_argc, const char *const *const p_argv) try {
             mv::uniform_buffer_t::get_set_layout_binding(
                 0, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
             ),
-            mv::vulkan_texture_t::get_set_layout_binding(
+            mv::vulkan_image_t::get_set_layout_binding(
                 1, 2, VK_SHADER_STAGE_FRAGMENT_BIT
             ),
         }
@@ -234,7 +235,7 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto command_buffer = command_pool.allocate_buffer();
 
-    const glm::vec3 light_position {1.5f, 2.7f, -1.8f};
+    const glm::vec3 light_position{1.5f, 2.7f, -1.8f};
 
     auto cube = mesh_t::create_cube(0.0f, 1.0, glm::vec3(0.0f, 0.0f, 2.0f));
     cube.append_cube(1.0f, 1.0, glm::vec3(0.0f, 2.0f, 1.0f));
@@ -281,12 +282,32 @@ int main(int p_argc, const char *const *const p_argv) try {
         }
     );
 
-    const auto texture = mv::vulkan_texture_t::load_from_file(
-        device, command_pool, "textures/can-pooper.png"
+    auto texture_image =
+        mv::image_t::load_from_file("textures/can-pooper.png", 4);
+    auto texture = mv::vulkan_image_t::create(
+        device, texture_image.width, texture_image.height
+    );
+    const auto texture_memory_requirements = texture.get_memory_requirements();
+
+    auto another_texture_image =
+        mv::image_t::load_from_file("textures/neng-face.jpg", 4);
+    auto another_texture = mv::vulkan_image_t::create(
+        device, another_texture_image.width, another_texture_image.height
+    );
+    const auto another_texture_memory_requirements =
+        another_texture.get_memory_requirements();
+
+    const std::array memory_requirements{
+        texture_memory_requirements,
+        another_texture_memory_requirements,
+    };
+    auto image_memory = mv::vulkan_memory_t::allocate(
+        device, memory_requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
 
-    const auto another_texture = mv::vulkan_texture_t::load_from_file(
-        device, command_pool, "textures/neng-face.jpg"
+    image_memory.bind_image(texture, texture_memory_requirements.size);
+    image_memory.bind_image(
+        another_texture, another_texture_memory_requirements.size
     );
 
     const auto texture_sampler = texture.create_sampler();
@@ -467,10 +488,10 @@ int main(int p_argc, const char *const *const p_argv) try {
 
             framebuffers.fucking_destroy();
             swapchain.fucking_destroy();
-            depth_buffer = mv::vulkan_texture_t{};
+            depth_buffer = mv::vulkan_image_t{};
 
             swapchain = mv::swapchain_t::create(device, window);
-            depth_buffer = mv::vulkan_texture_t::create_depth_attachment(
+            depth_buffer = mv::vulkan_image_t::create_depth_attachment(
                 device, swapchain.extent.width, swapchain.extent.height
             );
             depth_buffer.transition_layout(
@@ -620,11 +641,11 @@ int main(int p_argc, const char *const *const p_argv) try {
             vkDeviceWaitIdle(device.logical);
 
             swapchain = mv::swapchain_t{};
-            depth_buffer = mv::vulkan_texture_t{};
+            depth_buffer = mv::vulkan_image_t{};
             framebuffers = mv::swapchain_t::framebuffers_t{};
 
             swapchain = mv::swapchain_t::create(device, window);
-            depth_buffer = mv::vulkan_texture_t::create_depth_attachment(
+            depth_buffer = mv::vulkan_image_t::create_depth_attachment(
                 device, swapchain.extent.width, swapchain.extent.height
             );
             depth_buffer.transition_layout(
