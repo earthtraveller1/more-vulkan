@@ -5,6 +5,7 @@
 #include "buffers.hpp"
 #include "common.hpp"
 #include "errors.hpp"
+#include "memory.hpp"
 
 #include "images.hpp"
 
