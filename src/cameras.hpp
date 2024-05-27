@@ -1,8 +1,5 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 namespace mv {
 struct first_person_camera_t {
     glm::vec3 position;

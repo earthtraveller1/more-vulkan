@@ -12,4 +12,10 @@
 #include <optional>
 #include <string_view>
 #include <vector>
+#include <span>
+
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #endif

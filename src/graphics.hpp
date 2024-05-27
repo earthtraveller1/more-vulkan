@@ -1,8 +1,5 @@
 #pragma once
 
-#include <span>
-
-#include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
 #include "common.hpp"
