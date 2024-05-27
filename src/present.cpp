@@ -244,7 +244,7 @@ auto mv::swapchain_t::create(
 }
 
 auto mv::swapchain_t::create_framebuffers(
-    const render_pass_t &render_pass, const vulkan_texture_t &p_depth_buffer
+    const render_pass_t &render_pass, const vulkan_image_t &p_depth_buffer
 ) const -> mv::swapchain_t::framebuffers_t {
     std::vector<VkFramebuffer> framebuffers;
 

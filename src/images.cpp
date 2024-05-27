@@ -10,7 +10,7 @@
 
 namespace mv {
 
-vulkan_texture_t::vulkan_texture_t(vulkan_texture_t &&other) noexcept {
+vulkan_image_t::vulkan_image_t(vulkan_image_t &&other) noexcept {
     image = other.image;
     view = other.view;
     format = other.format;
@@ -28,8 +28,8 @@ vulkan_texture_t::vulkan_texture_t(vulkan_texture_t &&other) noexcept {
     other.device = nullptr;
 }
 
-auto vulkan_texture_t::operator=(vulkan_texture_t &&other) noexcept
-    -> vulkan_texture_t & {
+auto vulkan_image_t::operator=(vulkan_image_t &&other) noexcept
+    -> vulkan_image_t & {
     std::swap(image, other.image);
     std::swap(view, other.view);
     std::swap(format, other.format);
@@ -41,9 +41,9 @@ auto vulkan_texture_t::operator=(vulkan_texture_t &&other) noexcept
     return *this;
 }
 
-auto vulkan_texture_t::create(
+auto vulkan_image_t::create(
     const vulkan_device_t &device, uint32_t width, uint32_t height
-) -> vulkan_texture_t {
+) -> vulkan_image_t {
     const auto format = VK_FORMAT_R8G8B8A8_SRGB;
 
     const VkImageCreateInfo image_create_info{
@@ -100,9 +100,9 @@ auto vulkan_texture_t::create(
     };
 }
 
-auto vulkan_texture_t::create_depth_attachment(
+auto vulkan_image_t::create_depth_attachment(
     const vulkan_device_t &device, uint32_t width, uint32_t height
-) -> vulkan_texture_t {
+) -> vulkan_image_t {
     const std::array format_candiates{
         VK_FORMAT_D32_SFLOAT,
         VK_FORMAT_D32_SFLOAT_S8_UINT,
@@ -175,7 +175,7 @@ auto vulkan_texture_t::create_depth_attachment(
     };
 }
 
-auto vulkan_texture_t::load_from_file(
+auto vulkan_image_t::load_from_file(
     const command_pool_t &command_pool,
     std::string_view file_path
 ) -> void {
@@ -208,7 +208,7 @@ auto vulkan_texture_t::load_from_file(
     );
 }
 
-auto vulkan_texture_t::create_sampler() const -> sampler_t {
+auto vulkan_image_t::create_sampler() const -> sampler_t {
     const VkSamplerCreateInfo sampler_create_info{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = VK_FILTER_LINEAR,
@@ -236,7 +236,7 @@ auto vulkan_texture_t::create_sampler() const -> sampler_t {
     return {sampler, *device};
 }
 
-auto vulkan_texture_t::copy_from_buffer(
+auto vulkan_image_t::copy_from_buffer(
     const buffer_t &p_source, const command_pool_t &p_command_pool
 ) const -> void {
     const auto command_buffer = p_command_pool.allocate_buffer();
@@ -286,7 +286,7 @@ auto vulkan_texture_t::copy_from_buffer(
     );
 }
 
-auto vulkan_texture_t::transition_layout(
+auto vulkan_image_t::transition_layout(
     const command_pool_t &command_pool, VkImageLayout p_new_layout
 ) -> void {
     const auto command_buffer = command_pool.allocate_buffer();

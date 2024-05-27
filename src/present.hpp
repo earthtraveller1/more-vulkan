@@ -9,7 +9,7 @@
 namespace mv {
 
 struct render_pass_t;
-struct vulkan_texture_t;
+struct vulkan_image_t;
 
 struct window_t {
     GLFWwindow *window;
@@ -99,7 +99,7 @@ struct swapchain_t {
         }
     };
 
-    auto create_framebuffers(const render_pass_t &render_pass, const vulkan_texture_t& depth_buffer) const
+    auto create_framebuffers(const render_pass_t &render_pass, const vulkan_image_t& depth_buffer) const
         -> framebuffers_t;
 
     NO_COPY(swapchain_t);

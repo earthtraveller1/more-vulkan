@@ -24,7 +24,7 @@ struct vulkan_memory_t {
         VkMemoryPropertyFlags property_flags
     ) -> vulkan_memory_t;
 
-    inline auto bind_image(const vulkan_texture_t &image, VkDeviceSize size)
+    inline auto bind_image(const vulkan_image_t &image, VkDeviceSize size)
         -> void {
         vkBindImageMemory(device.logical, image.image, memory, bind_offset + size);
         bind_offset += size;

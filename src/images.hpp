@@ -10,7 +10,7 @@ namespace mv {
 struct buffer_t;
 struct vulkan_memory_t;
 
-struct vulkan_texture_t {
+struct vulkan_image_t {
     VkImage image;
     VkImageView view;
     VkFormat format;
@@ -21,9 +21,9 @@ struct vulkan_texture_t {
 
     const vulkan_device_t *device;
 
-    vulkan_texture_t() = default;
+    vulkan_image_t() = default;
 
-    vulkan_texture_t(
+    vulkan_image_t(
         VkImage p_image,
         VkImageView p_view,
         VkFormat p_format,
@@ -35,18 +35,18 @@ struct vulkan_texture_t {
         : image(p_image), view(p_view), format(p_format), layout(p_layout),
           width(p_width), height(p_height), device(&p_device) {}
 
-    NO_COPY(vulkan_texture_t);
+    NO_COPY(vulkan_image_t);
 
-    vulkan_texture_t(vulkan_texture_t &&other) noexcept;
-    auto operator=(vulkan_texture_t &&other) noexcept -> vulkan_texture_t &;
+    vulkan_image_t(vulkan_image_t &&other) noexcept;
+    auto operator=(vulkan_image_t &&other) noexcept -> vulkan_image_t &;
 
     static auto
     create(const vulkan_device_t &device, uint32_t width, uint32_t height)
-        -> vulkan_texture_t;
+        -> vulkan_image_t;
 
     static auto create_depth_attachment(
         const vulkan_device_t &device, uint32_t width, uint32_t height
-    ) -> vulkan_texture_t;
+    ) -> vulkan_image_t;
 
     auto load_from_file(
         const command_pool_t &command_pool,
@@ -108,7 +108,7 @@ struct vulkan_texture_t {
         };
     }
 
-    inline ~vulkan_texture_t() noexcept {
+    inline ~vulkan_image_t() noexcept {
         if (device != nullptr) {
             vkDestroyImageView(device->logical, view, nullptr);
             vkDestroyImage(device->logical, image, nullptr);
