@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stb_image.h>
 #include <vulkan/vulkan.h>
 
 #include "commands.hpp"
@@ -10,9 +11,28 @@ namespace mv {
 struct buffer_t;
 struct vulkan_memory_t;
 
+struct image_t {
+    stbi_uc *data;
+    int width;
+    int height;
+    int channels;
+
+    image_t(stbi_uc *p_data, int p_width, int p_height, int p_channels)
+        : data(p_data), width(p_width), height(p_height), channels(p_channels) {
+    }
+
+    static auto load_from_file(std::string_view file_path, int desired_channels)
+        -> image_t;
+
+    NO_COPY(image_t);
+
+    ~image_t() {
+        stbi_image_free(data);
+    }
+};
+
 struct vulkan_image_t {
     VkImage image;
-    VkImageView view;
     VkFormat format;
     VkImageLayout layout;
 
@@ -25,15 +45,14 @@ struct vulkan_image_t {
 
     vulkan_image_t(
         VkImage p_image,
-        VkImageView p_view,
         VkFormat p_format,
         VkImageLayout p_layout,
         uint32_t p_width,
         uint32_t p_height,
         const vulkan_device_t &p_device
     )
-        : image(p_image), view(p_view), format(p_format), layout(p_layout),
-          width(p_width), height(p_height), device(&p_device) {}
+        : image(p_image), format(p_format), layout(p_layout), width(p_width),
+          height(p_height), device(&p_device) {}
 
     NO_COPY(vulkan_image_t);
 
@@ -48,10 +67,9 @@ struct vulkan_image_t {
         const vulkan_device_t &device, uint32_t width, uint32_t height
     ) -> vulkan_image_t;
 
-    auto load_from_file(
-        const command_pool_t &command_pool,
-        std::string_view file_path
-    ) -> void;
+    auto
+    load_from_image(const command_pool_t &command_pool, const image_t &image)
+        -> void;
 
     struct sampler_t {
         VkSampler sampler;
@@ -99,7 +117,7 @@ struct vulkan_image_t {
         };
     }
 
-    auto get_descriptor_image_info(VkSampler sampler) const
+    auto get_descriptor_image_info(VkSampler sampler, VkImageView view) const
         -> VkDescriptorImageInfo {
         return {
             .sampler = sampler,
@@ -110,9 +128,9 @@ struct vulkan_image_t {
 
     inline ~vulkan_image_t() noexcept {
         if (device != nullptr) {
-            vkDestroyImageView(device->logical, view, nullptr);
             vkDestroyImage(device->logical, image, nullptr);
         }
     }
 };
+
 } // namespace mv

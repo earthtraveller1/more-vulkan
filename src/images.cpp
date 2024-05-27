@@ -10,9 +10,22 @@
 
 namespace mv {
 
+auto image_t::load_from_file(std::string_view file_path, int desired_channels)
+    -> image_t {
+    int width, height, channels;
+    const auto data = stbi_load(
+        file_path.data(), &width, &height, &channels, desired_channels
+    );
+
+    if (data == nullptr) {
+        throw file_exception(file_exception::type_t::read, file_path);
+    }
+
+    return {data, width, height, channels};
+}
+
 vulkan_image_t::vulkan_image_t(vulkan_image_t &&other) noexcept {
     image = other.image;
-    view = other.view;
     format = other.format;
     layout = other.layout;
     width = other.width;
@@ -20,7 +33,6 @@ vulkan_image_t::vulkan_image_t(vulkan_image_t &&other) noexcept {
     device = other.device;
 
     other.image = VK_NULL_HANDLE;
-    other.view = VK_NULL_HANDLE;
     other.format = VK_FORMAT_UNDEFINED;
     other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
     other.width = 0;
@@ -31,7 +43,6 @@ vulkan_image_t::vulkan_image_t(vulkan_image_t &&other) noexcept {
 auto vulkan_image_t::operator=(vulkan_image_t &&other) noexcept
     -> vulkan_image_t & {
     std::swap(image, other.image);
-    std::swap(view, other.view);
     std::swap(format, other.format);
     std::swap(layout, other.layout);
     std::swap(width, other.width);
@@ -91,7 +102,6 @@ auto vulkan_image_t::create(
 
     return {
         image,
-        image_view,
         format,
         VK_IMAGE_LAYOUT_UNDEFINED,
         width,
@@ -165,47 +175,31 @@ auto vulkan_image_t::create_depth_attachment(
     );
 
     return {
-        image,
-        view,
-        *format,
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        width,
-        height,
-        device
+        image,  *format, VK_IMAGE_LAYOUT_UNDEFINED, width, height, device
     };
 }
 
-auto vulkan_image_t::load_from_file(
-    const command_pool_t &command_pool,
-    std::string_view file_path
+auto vulkan_image_t::load_from_image(
+    const command_pool_t &command_pool, const image_t &image
 ) -> void {
-    int width, height, channels;
-    const auto data =
-        stbi_load(file_path.data(), &width, &height, &channels, 4);
+    transition_layout(command_pool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    if (data == nullptr) {
-        throw file_exception(file_exception::type_t::read, file_path);
-    }
-
-    transition_layout(
-        command_pool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    auto staging_buffer = staging_buffer_t::create(
+        *device, width * height * image.channels * sizeof(uint8_t)
     );
-
-    auto staging_buffer =
-        staging_buffer_t::create(*device, width * height * 4 * sizeof(uint8_t));
     memcpy(
-        staging_buffer.map_memory(), data, width * height * 4 * sizeof(uint8_t)
+        staging_buffer.map_memory(),
+        image.data,
+        width * height * 4 * sizeof(uint8_t)
     );
     staging_buffer.unmap_memory();
 
     copy_from_buffer(staging_buffer.buffer, command_pool);
 
     vkQueueWaitIdle(device->graphics_queue);
-    stbi_image_free(data);
+    stbi_image_free(image.data);
 
-    transition_layout(
-        command_pool, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    );
+    transition_layout(command_pool, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 auto vulkan_image_t::create_sampler() const -> sampler_t {
