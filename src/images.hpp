@@ -140,6 +140,8 @@ struct vulkan_image_view_t {
     // ure out how to move references.
     const vulkan_image_t *image;
 
+    vulkan_image_view_t() = default;
+
     inline vulkan_image_view_t(
         VkImageView p_image_view, const vulkan_image_t &p_image
     )
@@ -147,12 +149,28 @@ struct vulkan_image_view_t {
 
     NO_COPY(vulkan_image_view_t);
 
+    inline vulkan_image_view_t(vulkan_image_view_t&& other) {
+        image_view = other.image_view;
+        image = other.image;
+
+        other.image_view = VK_NULL_HANDLE;
+        other.image = nullptr;
+    }
+
+    inline auto operator=(vulkan_image_view_t&& other) -> vulkan_image_view_t& {
+        std::swap(image_view, other.image_view);
+        std::swap(image, other.image);
+        return *this;
+    }
+
     static auto
     create(const vulkan_image_t &p_image, VkImageAspectFlags image_aspect_flags)
         -> vulkan_image_view_t;
 
     inline ~vulkan_image_view_t() {
-        vkDestroyImageView(this->image->device->logical, image_view, nullptr);
+        if (image != nullptr && image_view != VK_NULL_HANDLE) {
+            vkDestroyImageView(this->image->device->logical, image_view, nullptr);
+        }
     }
 };
 
