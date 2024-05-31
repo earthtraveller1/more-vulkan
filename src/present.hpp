@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.hpp"
+#include "images.hpp"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -99,7 +100,7 @@ struct swapchain_t {
         }
     };
 
-    auto create_framebuffers(const render_pass_t &render_pass, const vulkan_image_t& depth_buffer) const
+    auto create_framebuffers(const render_pass_t &render_pass, const vulkan_image_view_t& depth_buffer) const
         -> framebuffers_t;
 
     NO_COPY(swapchain_t);

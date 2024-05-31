@@ -244,12 +244,12 @@ auto mv::swapchain_t::create(
 }
 
 auto mv::swapchain_t::create_framebuffers(
-    const render_pass_t &render_pass, const vulkan_image_t &p_depth_buffer
+    const render_pass_t &render_pass, const vulkan_image_view_t &p_depth_buffer
 ) const -> mv::swapchain_t::framebuffers_t {
     std::vector<VkFramebuffer> framebuffers;
 
     for (auto view : image_views) {
-        const std::array attachments{view, p_depth_buffer.view};
+        const std::array attachments{view, p_depth_buffer.image_view};
 
         const VkFramebufferCreateInfo create_info{
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
