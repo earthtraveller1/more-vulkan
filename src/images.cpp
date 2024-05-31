@@ -157,24 +157,6 @@ auto vulkan_image_t::create_depth_attachment(
     VK_ERROR(vkCreateImage(device.logical, &image_create_info, nullptr, &image)
     );
 
-    const VkImageViewCreateInfo view_create_info{
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = image,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = *format,
-        .subresourceRange =
-            {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-             .baseMipLevel = 0,
-             .levelCount = 1,
-             .baseArrayLayer = 0,
-             .layerCount = 1}
-    };
-
-    VkImageView view;
-    VK_ERROR(
-        vkCreateImageView(device.logical, &view_create_info, nullptr, &view)
-    );
-
     return {image, *format, VK_IMAGE_LAYOUT_UNDEFINED, width, height, device};
 }
 
