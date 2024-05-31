@@ -1,4 +1,5 @@
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan_core.h>
 
 #include "enumerate.hpp"
 #include "errors.hpp"
@@ -7,6 +8,41 @@
 
 using mv::vulkan_device_t;
 using mv::vulkan_instance_t;
+
+namespace {
+static void debug_break() {}
+
+VKAPI_ATTR auto VKAPI_CALL debug_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+    VkDebugUtilsMessageTypeFlagsEXT message_types,
+    const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+    void *user_data
+) -> VkBool32 {
+    (void)message_types;
+    (void)user_data;
+
+    std::cerr << "[VULKAN]: " << callback_data->pMessage << "\n\n";
+
+    if (message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        debug_break();
+    }
+
+    return VK_FALSE;
+}
+
+const VkDebugUtilsMessengerCreateInfoEXT MESSENGER_CREATE_INFO{
+    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+    .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+    .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                   VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                   VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+                   VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT,
+    .pfnUserCallback = debug_callback,
+};
+} // namespace
 
 auto vulkan_instance_t::create(bool p_enable_validation) -> vulkan_instance_t {
     if (p_enable_validation) {
@@ -40,6 +76,14 @@ auto vulkan_instance_t::create(bool p_enable_validation) -> vulkan_instance_t {
     const auto glfw_extensions =
         glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 
+    std::vector enabled_extensions(
+        glfw_extensions, glfw_extensions + glfw_extension_count
+    );
+
+    if (p_enable_validation) {
+        enabled_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
+
     const auto validation_layer_count = 1;
     const char *const validation_layers[validation_layer_count] = {
         "VK_LAYER_KHRONOS_validation"
@@ -47,12 +91,13 @@ auto vulkan_instance_t::create(bool p_enable_validation) -> vulkan_instance_t {
 
     VkInstanceCreateInfo instance_create_info{
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pNext = nullptr,
+        .pNext = &MESSENGER_CREATE_INFO,
         .pApplicationInfo = &application_info,
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = nullptr,
-        .enabledExtensionCount = glfw_extension_count,
-        .ppEnabledExtensionNames = glfw_extensions,
+        .enabledExtensionCount =
+            static_cast<uint32_t>(enabled_extensions.size()),
+        .ppEnabledExtensionNames = enabled_extensions.data(),
     };
 
     if (p_enable_validation) {
@@ -68,7 +113,26 @@ auto vulkan_instance_t::create(bool p_enable_validation) -> vulkan_instance_t {
         throw vulkan_exception{result};
     }
 
-    return vulkan_instance_t{instance};
+    const auto vk_create_debug_utils_messenger_ext =
+        reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+            vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT")
+        );
+
+    if (vk_create_debug_utils_messenger_ext == nullptr) {
+        throw vulkan_exception{VK_ERROR_EXTENSION_NOT_PRESENT};
+    }
+
+    VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
+    if (p_enable_validation) {
+        VK_ERROR(vk_create_debug_utils_messenger_ext(
+            instance, &MESSENGER_CREATE_INFO, nullptr, &messenger
+        ));
+    }
+
+    return vulkan_instance_t{
+        instance,
+        messenger,
+    };
 }
 
 // May throw vulkan_exception
@@ -227,4 +291,3 @@ auto vulkan_device_t::create(VkInstance p_instance, VkSurfaceKHR p_surface)
 
     return device;
 }
-
