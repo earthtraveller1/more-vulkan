@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include <stb_image.h>
+#include <vulkan/vulkan_core.h>
 
 #include "buffers.hpp"
 #include "common.hpp"
@@ -174,9 +175,7 @@ auto vulkan_image_t::create_depth_attachment(
         vkCreateImageView(device.logical, &view_create_info, nullptr, &view)
     );
 
-    return {
-        image,  *format, VK_IMAGE_LAYOUT_UNDEFINED, width, height, device
-    };
+    return {image, *format, VK_IMAGE_LAYOUT_UNDEFINED, width, height, device};
 }
 
 auto vulkan_image_t::load_from_image(
@@ -379,7 +378,6 @@ auto vulkan_image_t::transition_layout(
         1,
         &barrier
     );
-
     VK_ERROR(vkEndCommandBuffer(command_buffer));
 
     const VkSubmitInfo submit_info{
@@ -393,5 +391,36 @@ auto vulkan_image_t::transition_layout(
     );
 
     this->layout = p_new_layout;
+}
+
+auto vulkan_image_view_t::create(
+    const vulkan_image_t &p_image, VkImageAspectFlags p_aspect_flags
+) -> vulkan_image_view_t {
+    const VkImageViewCreateInfo view_info{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = p_image.image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = p_image.format,
+        .components =
+            {
+                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+            },
+        .subresourceRange =
+            {
+                .aspectMask = p_aspect_flags,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 0,
+            }
+    };
+
+    VkImageView view;
+    VK_ERROR(vkCreateImageView(p_image.device->logical, &view_info, nullptr, &view));
+
+    return { view, p_image };
 }
 } // namespace mv

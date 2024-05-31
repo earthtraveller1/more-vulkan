@@ -133,4 +133,27 @@ struct vulkan_image_t {
     }
 };
 
+struct vulkan_image_view_t {
+    VkImageView image_view;
+
+    // This is a pointer, as this class has to be moveable, and I could not fig-
+    // ure out how to move references.
+    const vulkan_image_t *image;
+
+    inline vulkan_image_view_t(
+        VkImageView p_image_view, const vulkan_image_t &p_image
+    )
+        : image_view(p_image_view), image(&p_image) {}
+
+    NO_COPY(vulkan_image_view_t);
+
+    static auto
+    create(const vulkan_image_t &p_image, VkImageAspectFlags image_aspect_flags)
+        -> vulkan_image_view_t;
+
+    inline ~vulkan_image_view_t() {
+        vkDestroyImageView(this->image->device->logical, image_view, nullptr);
+    }
+};
+
 } // namespace mv
