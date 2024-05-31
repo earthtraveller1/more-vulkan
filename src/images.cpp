@@ -78,29 +78,6 @@ auto vulkan_image_t::create(
     VkMemoryRequirements memory_requirements;
     vkGetImageMemoryRequirements(device.logical, image, &memory_requirements);
 
-    const VkImageViewCreateInfo image_view_create_info{
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = image,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = format,
-        .components =
-            {.r = VK_COMPONENT_SWIZZLE_R,
-             .g = VK_COMPONENT_SWIZZLE_G,
-             .b = VK_COMPONENT_SWIZZLE_B,
-             .a = VK_COMPONENT_SWIZZLE_A},
-        .subresourceRange =
-            {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-             .baseMipLevel = 0,
-             .levelCount = 1,
-             .baseArrayLayer = 0,
-             .layerCount = 1},
-    };
-
-    VkImageView image_view;
-    VK_ERROR(vkCreateImageView(
-        device.logical, &image_view_create_info, nullptr, &image_view
-    ));
-
     return {
         image,
         format,
