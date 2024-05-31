@@ -225,12 +225,12 @@ int main(int p_argc, const char *const *const p_argv) try {
         device, memory_requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
 
-    image_memory.bind_image(texture, texture_memory_requirements.size);
+    image_memory.bind_image(texture, texture_memory_requirements);
     image_memory.bind_image(
-        another_texture, another_texture_memory_requirements.size
+        another_texture, another_texture_memory_requirements
     );
     image_memory.bind_image(
-        depth_buffer, depth_buffer_memory_requirements.size
+        depth_buffer, depth_buffer_memory_requirements
     );
 
     std::cout << "depth buffer id: " << depth_buffer.image << std::endl;

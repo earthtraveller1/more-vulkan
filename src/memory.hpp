@@ -24,10 +24,12 @@ struct vulkan_memory_t {
         VkMemoryPropertyFlags property_flags
     ) -> vulkan_memory_t;
 
-    inline auto bind_image(const vulkan_image_t &image, VkDeviceSize size)
+    inline auto bind_image(const vulkan_image_t &image, VkMemoryRequirements requirements)
         -> void {
+        const auto offset_factor = bind_offset / requirements.alignment;
+        bind_offset = (offset_factor + 1) * requirements.alignment;
         vkBindImageMemory(device.logical, image.image, memory, bind_offset);
-        bind_offset += size;
+        bind_offset += requirements.size;
     }
 
     NO_COPY(vulkan_memory_t);

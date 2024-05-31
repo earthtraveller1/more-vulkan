@@ -7,7 +7,8 @@ auto mv::vulkan_memory_t::allocate(
 ) -> vulkan_memory_t {
     VkDeviceSize total_size = 0;
     for (const auto &req : requirements) {
-        total_size += req.size;
+        const auto offset = (total_size / req.alignment + 1) * req.alignment;
+        total_size = req.size + offset;
     }
 
     const VkMemoryAllocateInfo allocate_info{
