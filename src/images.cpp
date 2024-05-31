@@ -143,8 +143,9 @@ auto vulkan_image_t::load_from_image(
     transition_layout(command_pool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     auto staging_buffer = staging_buffer_t::create(
-        *device, width * height * image.channels * sizeof(uint8_t)
+        *device, width * height * 4 * sizeof(uint8_t)
     );
+
     memcpy(
         staging_buffer.map_memory(),
         image.data,
@@ -377,8 +378,10 @@ auto vulkan_image_view_t::create(
     };
 
     VkImageView view;
-    VK_ERROR(vkCreateImageView(p_image.device->logical, &view_info, nullptr, &view));
+    VK_ERROR(
+        vkCreateImageView(p_image.device->logical, &view_info, nullptr, &view)
+    );
 
-    return { view, p_image };
+    return {view, p_image};
 }
 } // namespace mv
