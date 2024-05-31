@@ -178,7 +178,6 @@ auto vulkan_image_t::load_from_image(
     copy_from_buffer(staging_buffer.buffer, command_pool);
 
     vkQueueWaitIdle(device->graphics_queue);
-    stbi_image_free(image.data);
 
     transition_layout(command_pool, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
