@@ -197,6 +197,58 @@ int main(int p_argc, const char *const *const p_argv) try {
         device, swapchain.extent.width, swapchain.extent.height
     );
 
+    const auto depth_buffer_memory_requirements =
+        depth_buffer.get_memory_requirements();
+
+    const auto texture_image =
+        mv::image_t::load_from_file("textures/can-pooper.png", 4);
+    auto texture = mv::vulkan_image_t::create(
+        device, texture_image.width, texture_image.height
+    );
+    const auto texture_memory_requirements = texture.get_memory_requirements();
+
+    const auto another_texture_image =
+        mv::image_t::load_from_file("textures/neng-face.jpg", 4);
+    auto another_texture = mv::vulkan_image_t::create(
+        device, another_texture_image.width, another_texture_image.height
+    );
+    const auto another_texture_memory_requirements =
+        another_texture.get_memory_requirements();
+
+    const std::array memory_requirements{
+        texture_memory_requirements,
+        another_texture_memory_requirements,
+        depth_buffer_memory_requirements,
+    };
+
+    auto image_memory = mv::vulkan_memory_t::allocate(
+        device, memory_requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+
+    image_memory.bind_image(texture, texture_memory_requirements.size);
+    image_memory.bind_image(
+        another_texture, another_texture_memory_requirements.size
+    );
+    image_memory.bind_image(
+        depth_buffer, depth_buffer_memory_requirements.size
+    );
+
+    std::cout << "depth buffer id: " << depth_buffer.image << std::endl;
+
+    texture.load_from_image(command_pool, texture_image);
+    another_texture.load_from_image(command_pool, another_texture_image);
+
+    const auto texture_view =
+        mv::vulkan_image_view_t::create(texture, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    const auto another_texture_view = mv::vulkan_image_view_t::create(
+        another_texture, VK_IMAGE_ASPECT_COLOR_BIT
+    );
+
+    auto depth_buffer_view = mv::vulkan_image_view_t::create(
+        depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
+    );
+
     depth_buffer.transition_layout(
         command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     );
@@ -204,7 +256,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto render_pass =
         mv::render_pass_t::create(device, swapchain, depth_buffer.format);
     auto framebuffers =
-        swapchain.create_framebuffers(render_pass, depth_buffer);
+        swapchain.create_framebuffers(render_pass, depth_buffer_view);
 
     const auto descriptor_set_layout = mv::descriptor_set_layout_t::create(
         device,
@@ -282,34 +334,6 @@ int main(int p_argc, const char *const *const p_argv) try {
         }
     );
 
-    auto texture_image =
-        mv::image_t::load_from_file("textures/can-pooper.png", 4);
-    auto texture = mv::vulkan_image_t::create(
-        device, texture_image.width, texture_image.height
-    );
-    const auto texture_memory_requirements = texture.get_memory_requirements();
-
-    auto another_texture_image =
-        mv::image_t::load_from_file("textures/neng-face.jpg", 4);
-    auto another_texture = mv::vulkan_image_t::create(
-        device, another_texture_image.width, another_texture_image.height
-    );
-    const auto another_texture_memory_requirements =
-        another_texture.get_memory_requirements();
-
-    const std::array memory_requirements{
-        texture_memory_requirements,
-        another_texture_memory_requirements,
-    };
-    auto image_memory = mv::vulkan_memory_t::allocate(
-        device, memory_requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
-
-    image_memory.bind_image(texture, texture_memory_requirements.size);
-    image_memory.bind_image(
-        another_texture, another_texture_memory_requirements.size
-    );
-
     const auto texture_sampler = texture.create_sampler();
 
     const auto descriptor_set =
@@ -317,10 +341,12 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     {
         const auto buffer_info = uniform_buffer.get_descriptor_buffer_info();
-        const auto image_info =
-            texture.get_descriptor_image_info(texture_sampler.sampler);
-        const auto image2_info =
-            another_texture.get_descriptor_image_info(texture_sampler.sampler);
+        const auto image_info = texture.get_descriptor_image_info(
+            texture_sampler.sampler, texture_view.image_view
+        );
+        const auto image2_info = another_texture.get_descriptor_image_info(
+            texture_sampler.sampler, another_texture_view.image_view
+        );
 
         const std::array set_writes{
             VkWriteDescriptorSet{
@@ -387,6 +413,7 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
+        std::cout << "frame" << std::endl;
         const auto start_time = glfwGetTime();
 
         const float speed = 1.0;
@@ -482,6 +509,8 @@ int main(int p_argc, const char *const *const p_argv) try {
         );
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+            std::cout << "out of date frame.\n";
+            std::cout.flush();
             // Make sure the device is done doing shit before we try to
             // destroy the swapchain
             vkDeviceWaitIdle(device.logical);
@@ -489,16 +518,20 @@ int main(int p_argc, const char *const *const p_argv) try {
             framebuffers.fucking_destroy();
             swapchain.fucking_destroy();
             depth_buffer = mv::vulkan_image_t{};
+            depth_buffer_view = mv::vulkan_image_view_t{};
 
             swapchain = mv::swapchain_t::create(device, window);
             depth_buffer = mv::vulkan_image_t::create_depth_attachment(
                 device, swapchain.extent.width, swapchain.extent.height
             );
+            depth_buffer_view = mv::vulkan_image_view_t::create(
+                depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
+            );
             depth_buffer.transition_layout(
                 command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             );
             framebuffers =
-                swapchain.create_framebuffers(render_pass, depth_buffer);
+                swapchain.create_framebuffers(render_pass, depth_buffer_view);
 
             continue;
         } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -636,23 +669,29 @@ int main(int p_argc, const char *const *const p_argv) try {
         result = vkQueuePresentKHR(device.present_queue, &present_info);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+            std::cout << "second out of date frame.\n";
+            std::cout.flush();
             // Make sure the device is done doing shit before we try to
             // destroy the swapchain
             vkDeviceWaitIdle(device.logical);
 
             swapchain = mv::swapchain_t{};
             depth_buffer = mv::vulkan_image_t{};
+            depth_buffer_view = mv::vulkan_image_view_t{};
             framebuffers = mv::swapchain_t::framebuffers_t{};
 
             swapchain = mv::swapchain_t::create(device, window);
             depth_buffer = mv::vulkan_image_t::create_depth_attachment(
                 device, swapchain.extent.width, swapchain.extent.height
             );
+            depth_buffer_view = mv::vulkan_image_view_t::create(
+                depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
+            );
             depth_buffer.transition_layout(
                 command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             );
             framebuffers =
-                swapchain.create_framebuffers(render_pass, depth_buffer);
+                swapchain.create_framebuffers(render_pass, depth_buffer_view);
         } else if (result != VK_SUCCESS) {
             throw mv::vulkan_exception{result};
         }
