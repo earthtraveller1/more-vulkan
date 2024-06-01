@@ -168,7 +168,7 @@ struct vulkan_image_view_t {
         -> vulkan_image_view_t;
 
     inline ~vulkan_image_view_t() {
-        if (image != nullptr && image_view != VK_NULL_HANDLE) {
+        if (image != nullptr &&  image->device != nullptr && image_view != VK_NULL_HANDLE) {
             vkDestroyImageView(this->image->device->logical, image_view, nullptr);
         }
     }
