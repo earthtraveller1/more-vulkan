@@ -197,8 +197,18 @@ int main(int p_argc, const char *const *const p_argv) try {
         device, swapchain.extent.width, swapchain.extent.height
     );
 
-    const auto depth_buffer_memory_requirements =
+    auto depth_buffer_memory_requirements =
         depth_buffer.get_memory_requirements();
+
+    auto depth_buffer_memory = mv::vulkan_memory_t::allocate(
+        device,
+        std::array{depth_buffer_memory_requirements},
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+
+    depth_buffer_memory.bind_image(
+        depth_buffer, depth_buffer_memory_requirements
+    );
 
     const auto texture_image =
         mv::image_t::load_from_file("textures/can-pooper.png", 4);
@@ -218,7 +228,6 @@ int main(int p_argc, const char *const *const p_argv) try {
     const std::array memory_requirements{
         texture_memory_requirements,
         another_texture_memory_requirements,
-        depth_buffer_memory_requirements,
     };
 
     auto image_memory = mv::vulkan_memory_t::allocate(
@@ -228,9 +237,6 @@ int main(int p_argc, const char *const *const p_argv) try {
     image_memory.bind_image(texture, texture_memory_requirements);
     image_memory.bind_image(
         another_texture, another_texture_memory_requirements
-    );
-    image_memory.bind_image(
-        depth_buffer, depth_buffer_memory_requirements
     );
 
     std::cout << "depth buffer id: " << depth_buffer.image << std::endl;
@@ -518,11 +524,19 @@ int main(int p_argc, const char *const *const p_argv) try {
             framebuffers.fucking_destroy();
             swapchain.fucking_destroy();
             depth_buffer = mv::vulkan_image_t{};
-            depth_buffer_view = mv::vulkan_image_view_t{};
-
             swapchain = mv::swapchain_t::create(device, window);
             depth_buffer = mv::vulkan_image_t::create_depth_attachment(
                 device, swapchain.extent.width, swapchain.extent.height
+            );
+            depth_buffer_memory_requirements = depth_buffer.get_memory_requirements();
+            depth_buffer_memory = mv::vulkan_memory_t::allocate(
+                device,
+                std::array{depth_buffer_memory_requirements},
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+            );
+            depth_buffer_memory.bind_offset = 0;
+            depth_buffer_memory.bind_image(
+                depth_buffer, depth_buffer_memory_requirements
             );
             depth_buffer_view = mv::vulkan_image_view_t::create(
                 depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
@@ -684,6 +698,17 @@ int main(int p_argc, const char *const *const p_argv) try {
             depth_buffer = mv::vulkan_image_t::create_depth_attachment(
                 device, swapchain.extent.width, swapchain.extent.height
             );
+            depth_buffer_memory_requirements = depth_buffer.get_memory_requirements();
+            depth_buffer_memory = mv::vulkan_memory_t::allocate(
+                device,
+                std::array{depth_buffer_memory_requirements},
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+            );
+            depth_buffer_memory.bind_offset = 0;
+            depth_buffer_memory.bind_image(
+                depth_buffer, depth_buffer_memory_requirements
+            );
+
             depth_buffer_view = mv::vulkan_image_view_t::create(
                 depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
             );
