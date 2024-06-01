@@ -373,7 +373,7 @@ auto vulkan_image_view_t::create(
                 .baseMipLevel = 0,
                 .levelCount = 1,
                 .baseArrayLayer = 0,
-                .layerCount = 0,
+                .layerCount = 1,
             }
     };
 
