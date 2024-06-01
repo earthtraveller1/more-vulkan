@@ -113,17 +113,19 @@ auto vulkan_instance_t::create(bool p_enable_validation) -> vulkan_instance_t {
         throw vulkan_exception{result};
     }
 
-    const auto vk_create_debug_utils_messenger_ext =
-        reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
-            vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT")
-        );
-
-    if (vk_create_debug_utils_messenger_ext == nullptr) {
-        throw vulkan_exception{VK_ERROR_EXTENSION_NOT_PRESENT};
-    }
-
     VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
     if (p_enable_validation) {
+        const auto vk_create_debug_utils_messenger_ext =
+            reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+                vkGetInstanceProcAddr(
+                    instance, "vkCreateDebugUtilsMessengerEXT"
+                )
+            );
+
+        if (vk_create_debug_utils_messenger_ext == nullptr) {
+            throw vulkan_exception{VK_ERROR_EXTENSION_NOT_PRESENT};
+        }
+
         VK_ERROR(vk_create_debug_utils_messenger_ext(
             instance, &MESSENGER_CREATE_INFO, nullptr, &messenger
         ));
