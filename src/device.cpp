@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
 
@@ -21,7 +23,32 @@ VKAPI_ATTR auto VKAPI_CALL debug_callback(
     (void)message_types;
     (void)user_data;
 
-    std::cerr << "[VULKAN]: " << callback_data->pMessage << "\n\n";
+    switch (message_severity) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            std::cerr << "\033[90m";
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            std::cerr << "\033[90m";
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            std::cerr << "\033[33m";
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            std::cerr << "\033[31m";
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
+            break;
+    };
+
+    std::cerr << "[VULKAN]: " << callback_data->pMessage;
+
+    if (std::strlen(callback_data->pMessage) > 80) {
+        std::cerr << "\n\n";
+    } else {
+        std::cerr << '\n';
+    }
+
+    std::cerr << "\033[0m";
 
     if (message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
         debug_break();
