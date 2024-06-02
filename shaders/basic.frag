@@ -2,6 +2,9 @@
 
 #include "common.glsl"
 
+#define LIGHT_ID 2
+#define FLOOR_ID 3
+
 layout (location = 0) out vec4 frag_color;
 
 layout (push_constant) uniform push_constants_t {
@@ -17,44 +20,51 @@ layout (location = 3) in vec3 normal;
 layout (location = 4) flat in int id;
 layout (location = 6) in vec3 fragment_position;
 
-void main()
-{
-    if (id == 2) {
+vec3 calculate_diffuse(vec3 normal, vec3 light_direction, vec3 light_color) {
+    const float diffuse_factor = max(0.0, dot(normal, light_direction));
+    return light_color * diffuse_factor;
+}
+
+vec3 calculate_specular(vec3 normal, vec3 light_direction, vec3 view_direction, vec3 light_color) {
+    const vec3 halfway_direction = normalize(light_direction + view_direction);
+    const float specular_factor = pow(max(0.0, dot(normal, halfway_direction)), 32.0);
+    return light_color * specular_factor;
+}
+
+float calculate_attenuation(float distance, float c, float l, float q) {
+    return 1.0 / (c + l*distance + q*distance*distance);
+}
+
+void main() {
+    // For rendering the light
+    if (id == LIGHT_ID) {
         frag_color = vec4(1.0, 1.0, 1.0, 1.0);
-    } else {
-        const vec4 color_bands = vec4(1.0, sin(( push_constants.t + x_pos ) * 10), 0.0, 1.0);
-
-        const vec3 normalize_normal = normalize(normal);
-        const vec3 light_direction = normalize(uniform_buffer_object.light_position - fragment_position);
-        const float diffuse_factor = max(0.0, dot(normalize_normal, light_direction));
-        const vec3 light_color = vec3(1.0, 1.0, 1.0);
-        const vec3 diffuse = light_color * diffuse_factor;
-
-        const vec3 view_direction = normalize(uniform_buffer_object.camera_position - fragment_position);
-        const vec3 halfway_direction = normalize(light_direction + view_direction);
-        const float specular_factor = pow(max(0.0, dot(normalize_normal, halfway_direction)), 32.0);
-        const vec3 specular = light_color * specular_factor;
-
-        const float attenuation_c = 1.0;
-        const float attenuation_l = 0.22;
-        const float attenuation_q = 0.20;
-
-        const float distance = length(uniform_buffer_object.light_position - fragment_position);
-        const float attenuation = 1.0 / (attenuation_c + attenuation_l * distance + attenuation_q * distance * distance);
-
-        const vec3 ambient = vec3(0.01, 0.01, 0.01);
-        const vec3 lighting = ( specular + ambient + diffuse ) * attenuation;
-
-        if (id == 3) {
-            const vec3 color = vec3(1.0, 1.0, 0.0) * lighting;
-            // const vec3 color = color_bands.xyz;
-            frag_color = vec4(color, 1.0);
-            return;
-        }
-
-        const vec4 texture_color = texture(texture_samplers[id], uv);
-        const vec3 color = lighting * texture_color.rgb;
-        frag_color = vec4(color, 1.0);
-        // frag_color = vec4(normalize_normal, 1.0);
+        return;
     }
+
+    vec3 material_color;
+    if (id == FLOOR_ID) {
+        material_color = vec3(1.0, 1.0, 0.0);
+    } else {
+        material_color = texture(texture_samplers[id], uv).rgb;
+    }
+
+    const vec4 color_bands = vec4(1.0, sin(( push_constants.t + x_pos ) * 10), 0.0, 1.0);
+    const vec3 light_color = vec3(1.0, 1.0, 1.0);
+
+    const vec3 normalized_normal = normalize(normal);
+    const vec3 light_direction = normalize(uniform_buffer_object.light_position - fragment_position);
+    const vec3 diffuse = calculate_diffuse(normalized_normal, light_direction, light_color);
+
+    const vec3 view_direction = normalize(uniform_buffer_object.camera_position - fragment_position);
+    const vec3 specular = calculate_specular(normalized_normal, light_direction, view_direction, light_color);
+
+    const float distance = length(uniform_buffer_object.light_position - fragment_position);
+    const float attenuation = calculate_attenuation(distance, 1.0, 0.22, 0.20);
+
+    const vec3 ambient = vec3(0.01, 0.01, 0.01);
+    const vec3 lighting = (specular + ambient + diffuse) * attenuation;
+
+    const vec3 color = material_color * lighting;
+    frag_color = vec4(color, 1.0);
 }
