@@ -419,7 +419,6 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
-        std::cout << "frame" << std::endl;
         const auto start_time = glfwGetTime();
 
         const float speed = 1.0;
