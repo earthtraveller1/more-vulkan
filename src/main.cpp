@@ -302,6 +302,9 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto frame_fence = vulkan_fence_t::create(device);
     const auto image_available_semaphore = vulkan_semaphore_t::create(device);
+    const auto shadow_done_semaphore = vulkan_semaphore_t::create(device);
+    const auto shadow_texture_layout_done_semaphore =
+        vulkan_semaphore_t::create(device);
     const auto render_done_semaphore = vulkan_semaphore_t::create(device);
 
     const auto descriptor_pool = mv::descriptor_pool_t::create(
@@ -309,13 +312,18 @@ int main(int p_argc, const char *const *const p_argv) try {
         std::array{
             VkDescriptorPoolSize{
                 .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 2,
+                .descriptorCount = 1,
+            },
+            VkDescriptorPoolSize{
+                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = 1,
             },
             VkDescriptorPoolSize{
                 .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .descriptorCount = 2,
             }
-        }
+        },
+        2
     );
 
     const auto texture_sampler = texture.create_sampler();
@@ -391,6 +399,8 @@ int main(int p_argc, const char *const *const p_argv) try {
         );
     }
 
+    const auto light_direction = glm::normalize(glm::vec3(-1.7f, 2.0f, 3.0f));
+
     uniform_buffer_object_t ubo{
         .projection = glm::perspective(
             45.0f,
@@ -402,7 +412,24 @@ int main(int p_argc, const char *const *const p_argv) try {
         .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 4.0f)),
         .model = glm::mat4(1.0f),
         .light_position = light_position,
-        .global_light_direction = glm::normalize(glm::vec3(-1.7f, 2.0f, 3.0f))
+        .global_light_direction = light_direction
+    };
+
+    const auto light_right =
+        glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), light_direction)
+        );
+    mv::first_person_camera_t light_camera{
+        light_position,
+        light_direction,
+        glm::cross(light_direction, light_right),
+        light_right
+    };
+
+    shadow_uniform_buffer_object_t shadow_ubo{
+        .projection = glm::perspective(45.0f, 1.0f, 0.1f, 100.0f),
+        .view = light_camera.look_at(),
+        .model = glm::mat4(1.0f),
+        .light_position = light_position,
     };
 
     mv::first_person_camera_t camera{
