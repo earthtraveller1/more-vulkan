@@ -8,9 +8,9 @@
 #include "device.hpp"
 #include "enumerate.hpp"
 #include "errors.hpp"
-#include "mesh.hpp"
 #include "graphics.hpp"
 #include "memory.hpp"
+#include "mesh.hpp"
 #include "present.hpp"
 #include "sync.hpp"
 
@@ -31,6 +31,47 @@ struct uniform_buffer_object_t {
     alignas(16) glm::vec3 global_light_direction;
     alignas(16) glm::vec3 camera_position;
 };
+
+auto recreate_swapchain(
+    const mv::window_t &window,
+    const mv::vulkan_device_t &device,
+    const mv::command_pool_t &command_pool,
+    const mv::render_pass_t &render_pass,
+    mv::swapchain_t &swapchain,
+    mv::swapchain_t::framebuffers_t &framebuffers,
+    mv::vulkan_image_t &depth_buffer,
+    mv::vulkan_image_view_t &depth_buffer_view,
+    mv::vulkan_memory_t &depth_buffer_memory
+) -> void {
+    swapchain = mv::swapchain_t{};
+    depth_buffer_view = mv::vulkan_image_view_t{};
+    depth_buffer = mv::vulkan_image_t{};
+    framebuffers = mv::swapchain_t::framebuffers_t{};
+
+    swapchain = mv::swapchain_t::create(device, window);
+    depth_buffer = mv::vulkan_image_t::create_depth_attachment(
+        device, swapchain.extent.width, swapchain.extent.height
+    );
+    const auto depth_buffer_memory_requirements =
+        depth_buffer.get_memory_requirements();
+    depth_buffer_memory = mv::vulkan_memory_t::allocate(
+        device,
+        std::array{depth_buffer_memory_requirements},
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    depth_buffer_memory.bind_offset = 0;
+    depth_buffer_memory.bind_image(
+        depth_buffer, depth_buffer_memory_requirements
+    );
+    depth_buffer_view = mv::vulkan_image_view_t::create(
+        depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
+    );
+    depth_buffer.transition_layout(
+        command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    );
+    framebuffers =
+        swapchain.create_framebuffers(render_pass, depth_buffer_view);
+}
 
 using mv::vertex_t;
 } // namespace
@@ -385,32 +426,17 @@ int main(int p_argc, const char *const *const p_argv) try {
             // Make sure the device is done doing shit before we try to
             // destroy the swapchain
             vkDeviceWaitIdle(device.logical);
-
-            framebuffers.fucking_destroy();
-            swapchain.fucking_destroy();
-            depth_buffer = mv::vulkan_image_t{};
-            swapchain = mv::swapchain_t::create(device, window);
-            depth_buffer = mv::vulkan_image_t::create_depth_attachment(
-                device, swapchain.extent.width, swapchain.extent.height
-            );
-            depth_buffer_memory_requirements = depth_buffer.get_memory_requirements();
-            depth_buffer_memory = mv::vulkan_memory_t::allocate(
+            recreate_swapchain(
+                window,
                 device,
-                std::array{depth_buffer_memory_requirements},
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                command_pool,
+                render_pass,
+                swapchain,
+                framebuffers,
+                depth_buffer,
+                depth_buffer_view,
+                depth_buffer_memory
             );
-            depth_buffer_memory.bind_offset = 0;
-            depth_buffer_memory.bind_image(
-                depth_buffer, depth_buffer_memory_requirements
-            );
-            depth_buffer_view = mv::vulkan_image_view_t::create(
-                depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
-            );
-            depth_buffer.transition_layout(
-                command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-            );
-            framebuffers =
-                swapchain.create_framebuffers(render_pass, depth_buffer_view);
 
             continue;
         } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -554,33 +580,17 @@ int main(int p_argc, const char *const *const p_argv) try {
             // destroy the swapchain
             vkDeviceWaitIdle(device.logical);
 
-            swapchain = mv::swapchain_t{};
-            depth_buffer_view = mv::vulkan_image_view_t{};
-            depth_buffer = mv::vulkan_image_t{};
-            framebuffers = mv::swapchain_t::framebuffers_t{};
-
-            swapchain = mv::swapchain_t::create(device, window);
-            depth_buffer = mv::vulkan_image_t::create_depth_attachment(
-                device, swapchain.extent.width, swapchain.extent.height
-            );
-            depth_buffer_memory_requirements = depth_buffer.get_memory_requirements();
-            depth_buffer_memory = mv::vulkan_memory_t::allocate(
+            recreate_swapchain(
+                window,
                 device,
-                std::array{depth_buffer_memory_requirements},
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                command_pool,
+                render_pass,
+                swapchain,
+                framebuffers,
+                depth_buffer,
+                depth_buffer_view,
+                depth_buffer_memory
             );
-            depth_buffer_memory.bind_offset = 0;
-            depth_buffer_memory.bind_image(
-                depth_buffer, depth_buffer_memory_requirements
-            );
-            depth_buffer_view = mv::vulkan_image_view_t::create(
-                depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
-            );
-            depth_buffer.transition_layout(
-                command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-            );
-            framebuffers =
-                swapchain.create_framebuffers(render_pass, depth_buffer_view);
         } else if (result != VK_SUCCESS) {
             throw mv::vulkan_exception{result};
         }
