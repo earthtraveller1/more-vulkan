@@ -96,9 +96,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     glfwSetInputMode(window.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     const auto device = mv::vulkan_device_t::create(instance, window.surface);
     auto swapchain = mv::swapchain_t::create(device, window);
-
     const auto command_pool = mv::command_pool_t::create(device);
-
     auto depth_buffer = mv::vulkan_image_t::create_depth_attachment(
         device, swapchain.extent.width, swapchain.extent.height
     );
@@ -114,6 +112,14 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     depth_buffer_memory.bind_image(
         depth_buffer, depth_buffer_memory_requirements
+    );
+    
+    auto depth_buffer_view = mv::vulkan_image_view_t::create(
+        depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
+    );
+
+    depth_buffer.transition_layout(
+        command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     );
 
     const auto texture_image =
@@ -145,8 +151,6 @@ int main(int p_argc, const char *const *const p_argv) try {
         another_texture, another_texture_memory_requirements
     );
 
-    std::cout << "depth buffer id: " << depth_buffer.image << std::endl;
-
     texture.load_from_image(command_pool, texture_image);
     another_texture.load_from_image(command_pool, another_texture_image);
 
@@ -157,13 +161,6 @@ int main(int p_argc, const char *const *const p_argv) try {
         another_texture, VK_IMAGE_ASPECT_COLOR_BIT
     );
 
-    auto depth_buffer_view = mv::vulkan_image_view_t::create(
-        depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
-    );
-
-    depth_buffer.transition_layout(
-        command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-    );
 
     const auto render_pass =
         mv::render_pass_t::create(device, swapchain, depth_buffer.format);
