@@ -5,6 +5,8 @@
 #define LIGHT_ID 2
 #define FLOOR_ID 3
 
+#define M_PI 3.1415926535897932384626433832795
+
 layout (location = 0) out vec4 frag_color;
 
 layout (push_constant) uniform push_constants_t {
@@ -63,7 +65,16 @@ void main() {
     const float attenuation = calculate_attenuation(distance, 1.0, 0.22, 0.20);
 
     const vec3 ambient = vec3(0.01, 0.01, 0.01);
-    const vec3 lighting = (specular + ambient + diffuse) * attenuation;
+
+    const float offset = dot(-uniform_buffer_object.global_light_direction, light_direction);
+    const float cutoff = cos(radians(45.0));
+
+    vec3 lighting;
+    if (offset > cutoff) {
+        lighting = (specular * attenuation + ambient + diffuse * attenuation);
+    } else {
+        lighting = ambient;
+    }
 
     const vec3 color = material_color * lighting;
     frag_color = vec4(color, 1.0);

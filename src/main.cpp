@@ -26,8 +26,9 @@ struct uniform_buffer_object_t {
     glm::mat4 projection;
     glm::mat4 view;
     glm::mat4 model;
-    glm::vec3 light_position;
-    glm::vec3 camera_position;
+    alignas(16) glm::vec3 light_position;
+    alignas(16) glm::vec3 global_light_direction;
+    alignas(16) glm::vec3 camera_position;
 };
 
 using mv::vertex_t;
@@ -293,7 +294,7 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto command_buffer = command_pool.allocate_buffer();
 
-    const glm::vec3 light_position{1.5f, 2.7f, -1.8f};
+    const glm::vec3 light_position{1.5f, -2.7f, -1.8f};
 
     auto cube = mesh_t::create_cube(0.0f, 1.0, glm::vec3(0.0f, 0.0f, 2.0f));
     cube.append_cube(1.0f, 1.0, glm::vec3(0.0f, 2.0f, 1.0f));
@@ -400,6 +401,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 4.0f)),
         .model = glm::mat4(1.0f),
         .light_position = light_position,
+        .global_light_direction = glm::normalize(glm::vec3(0.0f, 2.0f, 3.0f))
     };
 
     mv::first_person_camera_t camera{
