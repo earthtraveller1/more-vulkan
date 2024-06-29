@@ -14,7 +14,8 @@ auto read_file_to_vector(std::string_view file_name) -> std::vector<char>;
 
 namespace mv {
 auto graphics_pipeline_t::create(
-    const mv::vulkan_device_t &p_device, const render_pass_t &p_render_pass,
+    const mv::vulkan_device_t &p_device,
+    const render_pass_t &p_render_pass,
     std::string_view p_vertex_shader_path,
     std::string_view p_fragment_shader_path,
     std::span<const VkPushConstantRange> push_constant_ranges,
@@ -32,7 +33,9 @@ auto graphics_pipeline_t::create(
 
     VkPipelineLayout pipeline_layout;
     auto result = vkCreatePipelineLayout(
-        p_device.logical, &pipeline_layout_create_info, nullptr,
+        p_device.logical,
+        &pipeline_layout_create_info,
+        nullptr,
         &pipeline_layout
     );
 
@@ -52,7 +55,9 @@ auto graphics_pipeline_t::create(
 
     VkShaderModule vertex_shader_module;
     result = vkCreateShaderModule(
-        p_device.logical, &vertex_shader_module_create_info, nullptr,
+        p_device.logical,
+        &vertex_shader_module_create_info,
+        nullptr,
         &vertex_shader_module
     );
 
@@ -69,7 +74,9 @@ auto graphics_pipeline_t::create(
 
     VkShaderModule fragment_shader_module;
     result = vkCreateShaderModule(
-        p_device.logical, &fragment_shader_module_create_info, nullptr,
+        p_device.logical,
+        &fragment_shader_module_create_info,
+        nullptr,
         &fragment_shader_module
     );
 
@@ -129,7 +136,7 @@ auto graphics_pipeline_t::create(
         .sampleShadingEnable = VK_FALSE,
     };
 
-    const VkPipelineDepthStencilStateCreateInfo depth_stencil_state {
+    const VkPipelineDepthStencilStateCreateInfo depth_stencil_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .depthTestEnable = VK_TRUE,
         .depthWriteEnable = VK_TRUE,
@@ -185,7 +192,11 @@ auto graphics_pipeline_t::create(
 
     VkPipeline pipeline;
     result = vkCreateGraphicsPipelines(
-        p_device.logical, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr,
+        p_device.logical,
+        VK_NULL_HANDLE,
+        1,
+        &pipeline_create_info,
+        nullptr,
         &pipeline
     );
 
@@ -200,10 +211,12 @@ auto graphics_pipeline_t::create(
 }
 
 auto render_pass_t::create(
-    const mv::vulkan_device_t &p_device, const mv::swapchain_t &p_swapchain, VkFormat p_depth_format
+    const mv::vulkan_device_t &p_device,
+    VkFormat color_format,
+    std::optional<VkFormat> p_depth_format
 ) -> render_pass_t {
     const VkAttachmentDescription color_attachment{
-        .format = p_swapchain.format,
+        .format = color_format,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -211,17 +224,6 @@ auto render_pass_t::create(
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    };
-
-    const VkAttachmentDescription depth_attachment{
-        .format = p_depth_format,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
     const VkAttachmentReference color_attachment_reference{
@@ -234,21 +236,33 @@ auto render_pass_t::create(
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
-    const std::array attachments {
-        color_attachment,
-        depth_attachment
-    };
+    std::vector attachments{color_attachment};
 
-    const VkSubpassDescription subpass{
+    VkSubpassDescription subpass{
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_attachment_reference,
-        .pDepthStencilAttachment = &depth_attachment_reference,
     };
+
+    if (p_depth_format.has_value()) {
+        const VkAttachmentDescription depth_attachment{
+            .format = p_depth_format.value(),
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        };
+        
+        attachments.push_back(depth_attachment);
+        subpass.pDepthStencilAttachment = &depth_attachment_reference;
+    }
 
     const VkRenderPassCreateInfo render_pass_create_info{
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = attachments.size(),
+        .attachmentCount = static_cast<uint32_t>(attachments.size()),
         .pAttachments = attachments.data(),
         .subpassCount = 1,
         .pSubpasses = &subpass,
@@ -263,6 +277,33 @@ auto render_pass_t::create(
     }
 
     return {render_pass, p_device};
+}
+
+VkFramebuffer create_framebuffer(
+    const vulkan_device_t &device,
+    const vulkan_image_view_t &image_view,
+    uint32_t width,
+    uint32_t height,
+    const render_pass_t &render_pass
+) {
+    const VkFramebufferCreateInfo framebuffer_info{
+        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .renderPass = render_pass.render_pass,
+        .attachmentCount = 1,
+        .pAttachments = &image_view.image_view,
+        .width = width,
+        .height = height,
+        .layers = 1
+    };
+
+    VkFramebuffer framebuffer;
+    VK_ERROR(vkCreateFramebuffer(
+        device.logical, &framebuffer_info, nullptr, &framebuffer
+    ));
+
+    return framebuffer;
 }
 
 auto descriptor_set_layout_t::create(

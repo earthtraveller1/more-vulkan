@@ -163,7 +163,7 @@ int main(int p_argc, const char *const *const p_argv) try {
 
 
     const auto render_pass =
-        mv::render_pass_t::create(device, swapchain, depth_buffer.format);
+        mv::render_pass_t::create(device, swapchain.format, depth_buffer.format);
     auto framebuffers =
         swapchain.create_framebuffers(render_pass, depth_buffer_view);
 

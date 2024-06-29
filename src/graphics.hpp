@@ -58,14 +58,23 @@ struct render_pass_t {
 
     static auto create(
         const mv::vulkan_device_t &device,
-        const mv::swapchain_t &swapchain,
-        VkFormat depth_format
+        VkFormat color_format,
+        std::optional<VkFormat> depth_format
     ) -> render_pass_t;
 
     ~render_pass_t() {
         vkDestroyRenderPass(device.logical, render_pass, nullptr);
     }
 };
+
+VkFramebuffer create_framebuffer(
+    const vulkan_device_t &device,
+    const vulkan_image_view_t &image_view,
+    uint32_t width,
+    uint32_t height,
+    const render_pass_t &render_pass
+);
+
 struct vertex_t {
     glm::vec3 position;
     glm::vec2 uv;
@@ -140,8 +149,8 @@ struct descriptor_pool_t {
         std::span<const VkDescriptorPoolSize> pool_sizes
     ) -> descriptor_pool_t;
 
-    auto allocate_descriptor_set(const descriptor_set_layout_t &layout) const
-        -> VkDescriptorSet;
+    auto allocate_descriptor_set(const descriptor_set_layout_t &layout
+    ) const -> VkDescriptorSet;
 
     NO_COPY(descriptor_pool_t);
     YES_MOVE(descriptor_pool_t);
