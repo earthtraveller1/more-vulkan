@@ -41,8 +41,8 @@ vulkan_image_t::vulkan_image_t(vulkan_image_t &&other) noexcept {
     other.device = nullptr;
 }
 
-auto vulkan_image_t::operator=(vulkan_image_t &&other) noexcept
-    -> vulkan_image_t & {
+auto vulkan_image_t::operator=(vulkan_image_t &&other
+) noexcept -> vulkan_image_t & {
     std::swap(image, other.image);
     std::swap(format, other.format);
     std::swap(layout, other.layout);
@@ -54,7 +54,10 @@ auto vulkan_image_t::operator=(vulkan_image_t &&other) noexcept
 }
 
 auto vulkan_image_t::create(
-    const vulkan_device_t &device, uint32_t width, uint32_t height, VkFormat format
+    const vulkan_device_t &device,
+    uint32_t width,
+    uint32_t height,
+    VkFormat format
 ) -> vulkan_image_t {
     const VkImageCreateInfo image_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -140,9 +143,8 @@ auto vulkan_image_t::load_from_image(
 ) -> void {
     transition_layout(command_pool, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    auto staging_buffer = staging_buffer_t::create(
-        *device, width * height * 4 * sizeof(uint8_t)
-    );
+    auto staging_buffer =
+        staging_buffer_t::create(*device, width * height * 4 * sizeof(uint8_t));
 
     memcpy(
         staging_buffer.map_memory(),
@@ -262,20 +264,40 @@ auto vulkan_image_t::transition_layout(
                 .dst_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
                 .dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT,
             };
-        } else if (this->layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && p_new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        } else if (this->layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+                   p_new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
             return {
                 .src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
                 .src_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT,
                 .dst_access_mask = VK_ACCESS_SHADER_READ_BIT,
                 .dst_stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             };
-        } else if (this->layout == VK_IMAGE_LAYOUT_UNDEFINED && p_new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+        } else if (this->layout == VK_IMAGE_LAYOUT_UNDEFINED &&
+                   p_new_layout ==
+                       VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
             return {
                 .src_access_mask = 0,
                 .src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 .dst_access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
                                    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                 .dst_stage_mask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            };
+        } else if (this->layout == VK_IMAGE_LAYOUT_UNDEFINED &&
+                   p_new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+            return {
+                .src_access_mask = 0,
+                .src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                .dst_access_mask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                   VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dst_stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            };
+        } else if (this->layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && p_new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+            return {
+                .src_access_mask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                   VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .src_stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dst_access_mask = VK_ACCESS_SHADER_READ_BIT,
+                .dst_stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             };
         } else {
             throw std::runtime_error(
