@@ -1,4 +1,5 @@
 #include "images.hpp"
+#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -150,15 +151,21 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto another_texture_memory_requirements =
         another_texture.get_memory_requirements();
 
-    const auto shadow_texture =
+    auto shadow_texture =
         mv::vulkan_image_t::create(device, 1024, 1024, VK_FORMAT_R32_SFLOAT);
     const auto shadow_texture_memory_requirements =
         shadow_texture.get_memory_requirements();
+
+    auto shadow_depth_buffer =
+        mv::vulkan_image_t::create_depth_attachment(device, 1024, 1024);
+    const auto shadow_depth_buffer_memory_requirements =
+        shadow_depth_buffer.get_memory_requirements();
 
     const std::array memory_requirements{
         texture_memory_requirements,
         another_texture_memory_requirements,
         shadow_texture_memory_requirements,
+        shadow_depth_buffer_memory_requirements,
     };
 
     auto image_memory = mv::vulkan_memory_t::allocate(
@@ -170,9 +177,18 @@ int main(int p_argc, const char *const *const p_argv) try {
         another_texture, another_texture_memory_requirements
     );
     image_memory.bind_image(shadow_texture, shadow_texture_memory_requirements);
+    image_memory.bind_image(
+        shadow_depth_buffer, shadow_depth_buffer_memory_requirements
+    );
 
     texture.load_from_image(command_pool, texture_image);
     another_texture.load_from_image(command_pool, another_texture_image);
+    shadow_texture.transition_layout(
+        command_pool, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    );
+    shadow_depth_buffer.transition_layout(
+        command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    );
 
     const auto texture_view =
         mv::vulkan_image_view_t::create(texture, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -183,6 +199,10 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto shadow_texture_view = mv::vulkan_image_view_t::create(
         shadow_texture, VK_IMAGE_ASPECT_COLOR_BIT
+    );
+
+    const auto shadow_depth_buffer_view = mv::vulkan_image_view_t::create(
+        shadow_depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
     );
 
     const auto render_pass = mv::render_pass_t::create(
