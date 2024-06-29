@@ -689,8 +689,8 @@ int main(int p_argc, const char *const *const p_argv) try {
             vkDeviceWaitIdle(device.logical);
 
             swapchain = mv::swapchain_t{};
-            depth_buffer = mv::vulkan_image_t{};
             depth_buffer_view = mv::vulkan_image_view_t{};
+            depth_buffer = mv::vulkan_image_t{};
             framebuffers = mv::swapchain_t::framebuffers_t{};
 
             swapchain = mv::swapchain_t::create(device, window);
@@ -707,7 +707,6 @@ int main(int p_argc, const char *const *const p_argv) try {
             depth_buffer_memory.bind_image(
                 depth_buffer, depth_buffer_memory_requirements
             );
-
             depth_buffer_view = mv::vulkan_image_view_t::create(
                 depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
             );
