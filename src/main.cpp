@@ -385,7 +385,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         const std::array set_writes{
             VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = descriptor_set,
+                .dstSet = shadow_descriptor_set,
                 .dstBinding = 0,
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
