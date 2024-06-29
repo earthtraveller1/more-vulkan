@@ -54,10 +54,8 @@ auto vulkan_image_t::operator=(vulkan_image_t &&other) noexcept
 }
 
 auto vulkan_image_t::create(
-    const vulkan_device_t &device, uint32_t width, uint32_t height
+    const vulkan_device_t &device, uint32_t width, uint32_t height, VkFormat format
 ) -> vulkan_image_t {
-    const auto format = VK_FORMAT_R8G8B8A8_SRGB;
-
     const VkImageCreateInfo image_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,

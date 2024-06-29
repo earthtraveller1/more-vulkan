@@ -32,6 +32,13 @@ struct uniform_buffer_object_t {
     alignas(16) glm::vec3 camera_position;
 };
 
+struct shadow_uniform_buffer_object_t {
+    glm::mat4 projection;
+    glm::mat4 view;
+    glm::mat4 model;
+    alignas(16) glm::vec3 light_position;
+};
+
 auto recreate_swapchain(
     const mv::window_t &window,
     const mv::vulkan_device_t &device,
@@ -113,7 +120,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     depth_buffer_memory.bind_image(
         depth_buffer, depth_buffer_memory_requirements
     );
-    
+
     auto depth_buffer_view = mv::vulkan_image_view_t::create(
         depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
     );
@@ -125,21 +132,33 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto texture_image =
         mv::image_t::load_from_file("textures/can-pooper.png", 4);
     auto texture = mv::vulkan_image_t::create(
-        device, texture_image.width, texture_image.height
+        device,
+        texture_image.width,
+        texture_image.height,
+        VK_FORMAT_R8G8B8A8_SRGB
     );
     const auto texture_memory_requirements = texture.get_memory_requirements();
 
     const auto another_texture_image =
         mv::image_t::load_from_file("textures/neng-face.jpg", 4);
     auto another_texture = mv::vulkan_image_t::create(
-        device, another_texture_image.width, another_texture_image.height
+        device,
+        another_texture_image.width,
+        another_texture_image.height,
+        VK_FORMAT_R8G8B8A8_SRGB
     );
     const auto another_texture_memory_requirements =
         another_texture.get_memory_requirements();
 
+    const auto shadow_texture =
+        mv::vulkan_image_t::create(device, 1024, 1024, VK_FORMAT_R32_SFLOAT);
+    const auto shadow_texture_memory_requirements =
+        shadow_texture.get_memory_requirements();
+
     const std::array memory_requirements{
         texture_memory_requirements,
         another_texture_memory_requirements,
+        shadow_texture_memory_requirements,
     };
 
     auto image_memory = mv::vulkan_memory_t::allocate(
@@ -150,6 +169,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     image_memory.bind_image(
         another_texture, another_texture_memory_requirements
     );
+    image_memory.bind_image(shadow_texture, shadow_texture_memory_requirements);
 
     texture.load_from_image(command_pool, texture_image);
     another_texture.load_from_image(command_pool, another_texture_image);
@@ -161,11 +181,21 @@ int main(int p_argc, const char *const *const p_argv) try {
         another_texture, VK_IMAGE_ASPECT_COLOR_BIT
     );
 
+    const auto shadow_texture_view = mv::vulkan_image_view_t::create(
+        shadow_texture, VK_IMAGE_ASPECT_COLOR_BIT
+    );
 
-    const auto render_pass =
-        mv::render_pass_t::create(device, swapchain.format, depth_buffer.format);
+    const auto render_pass = mv::render_pass_t::create(
+        device, swapchain.format, depth_buffer.format
+    );
     auto framebuffers =
         swapchain.create_framebuffers(render_pass, depth_buffer_view);
+
+    const auto shadow_render_pass =
+        mv::render_pass_t::create(device, VK_FORMAT_R32_SFLOAT, {});
+    const auto shadow_framebuffer = mv::create_framebuffer(
+        device, shadow_texture_view, 1024, 1024, shadow_render_pass
+    );
 
     const auto descriptor_set_layout = mv::descriptor_set_layout_t::create(
         device,
@@ -178,6 +208,18 @@ int main(int p_argc, const char *const *const p_argv) try {
             ),
         }
     );
+
+    const auto shadow_descriptor_set_layout =
+        mv::descriptor_set_layout_t::create(
+            device,
+            std::array{
+                mv::uniform_buffer_t::get_set_layout_binding(
+                    0,
+                    1,
+                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+                ),
+            }
+        );
 
     const auto pipeline = mv::graphics_pipeline_t::create(
         device,
@@ -192,6 +234,15 @@ int main(int p_argc, const char *const *const p_argv) try {
         std::array<VkDescriptorSetLayout, 1>{
             descriptor_set_layout.layout,
         }
+    );
+
+    const auto shadow_pipeline = mv::graphics_pipeline_t::create(
+        device,
+        shadow_render_pass,
+        "shaders/shadow.vert.spv",
+        "shaders/shadow.frag.spv",
+        std::array<VkPushConstantRange, 0>{},
+        std::array{shadow_descriptor_set_layout.layout}
     );
 
     const auto command_buffer = command_pool.allocate_buffer();
@@ -225,6 +276,10 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto uniform_buffer =
         mv::uniform_buffer_t::create(device, sizeof(uniform_buffer_object_t));
 
+    const auto shadow_uniform_buffer = mv::uniform_buffer_t::create(
+        device, sizeof(shadow_uniform_buffer_object_t)
+    );
+
     const auto frame_fence = vulkan_fence_t::create(device);
     const auto image_available_semaphore = vulkan_semaphore_t::create(device);
     const auto render_done_semaphore = vulkan_semaphore_t::create(device);
@@ -234,7 +289,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         std::array{
             VkDescriptorPoolSize{
                 .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 1,
+                .descriptorCount = 2,
             },
             VkDescriptorPoolSize{
                 .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -285,6 +340,30 @@ int main(int p_argc, const char *const *const p_argv) try {
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .pImageInfo = &image2_info,
             }
+        };
+
+        vkUpdateDescriptorSets(
+            device.logical, set_writes.size(), set_writes.data(), 0, nullptr
+        );
+    }
+
+    const auto shadow_descriptor_set =
+        descriptor_pool.allocate_descriptor_set(shadow_descriptor_set_layout);
+
+    {
+        const auto buffer_info =
+            shadow_uniform_buffer.get_descriptor_buffer_info();
+
+        const std::array set_writes{
+            VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pBufferInfo = &buffer_info,
+            },
         };
 
         vkUpdateDescriptorSets(

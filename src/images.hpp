@@ -60,7 +60,7 @@ struct vulkan_image_t {
     auto operator=(vulkan_image_t &&other) noexcept -> vulkan_image_t &;
 
     static auto
-    create(const vulkan_device_t &device, uint32_t width, uint32_t height)
+    create(const vulkan_device_t &device, uint32_t width, uint32_t height, VkFormat format)
         -> vulkan_image_t;
 
     static auto create_depth_attachment(
