@@ -325,11 +325,12 @@ auto descriptor_set_layout_t::create(
 
 auto descriptor_pool_t::create(
     const vulkan_device_t &p_device,
-    std::span<const VkDescriptorPoolSize> pool_sizes
+    std::span<const VkDescriptorPoolSize> pool_sizes,
+    uint32_t max_sets
 ) -> descriptor_pool_t {
     const VkDescriptorPoolCreateInfo pool_info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = 1,
+        .maxSets = max_sets,
         .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
         .pPoolSizes = pool_sizes.data(),
     };

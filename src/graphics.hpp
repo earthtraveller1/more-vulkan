@@ -146,7 +146,8 @@ struct descriptor_pool_t {
 
     static auto create(
         const vulkan_device_t &p_device,
-        std::span<const VkDescriptorPoolSize> pool_sizes
+        std::span<const VkDescriptorPoolSize> pool_sizes,
+        uint32_t max_sets
     ) -> descriptor_pool_t;
 
     auto allocate_descriptor_set(const descriptor_set_layout_t &layout
