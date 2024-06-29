@@ -38,7 +38,7 @@ struct no_adequate_swapchain_settings_exception : public std::exception {
 };
 
 struct no_adequate_memory_type_exception : public std::exception {
-    virtual const char* what() const noexcept override {
+    virtual const char *what() const noexcept override {
         return "Could not find adequate memory type.";
     }
 };
@@ -179,7 +179,6 @@ auto operator<<(std::basic_ostream<T> &p_ostream, VkResult p_error_code)
         return p_ostream << "VK_INCOMPATIBLE_SHADER_BINARY_EXT";
     case VK_RESULT_MAX_ENUM:
         return p_ostream << "VK_RESULT_MAX_ENUM";
-    default:
-        return p_ostream << "Unknown error";
+        default : return p_ostream << "Unknown error";
     }
 }
