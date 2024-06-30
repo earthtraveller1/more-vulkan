@@ -59,7 +59,9 @@ struct render_pass_t {
     static auto create(
         const mv::vulkan_device_t &device,
         std::optional<VkFormat> color_format,
-        std::optional<VkFormat> depth_format
+        std::optional<VkFormat> depth_format,
+        std::span<const VkSubpassDependency> subpass_dependencies =
+            std::array<VkSubpassDependency, 0>{}
     ) -> render_pass_t;
 
     ~render_pass_t() {
@@ -69,7 +71,7 @@ struct render_pass_t {
 
 struct framebuffer_t {
     VkFramebuffer framebuffer;
-    const vulkan_device_t& device;
+    const vulkan_device_t &device;
 
     ~framebuffer_t() {
         vkDestroyFramebuffer(device.logical, framebuffer, nullptr);

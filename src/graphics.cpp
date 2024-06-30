@@ -265,7 +265,8 @@ auto graphics_pipeline_t::create(
 auto render_pass_t::create(
     const mv::vulkan_device_t &p_device,
     std::optional<VkFormat> color_format,
-    std::optional<VkFormat> p_depth_format
+    std::optional<VkFormat> p_depth_format,
+    std::span<const VkSubpassDependency> p_dependencies
 ) -> render_pass_t {
     uint32_t attachment_counter = 0;
 
@@ -344,8 +345,8 @@ auto render_pass_t::create(
         .pAttachments = attachments.data(),
         .subpassCount = 1,
         .pSubpasses = &subpass,
-        .dependencyCount = 0,
-        .pDependencies = nullptr,
+        .dependencyCount = static_cast<uint32_t>(p_dependencies.size()),
+        .pDependencies = p_dependencies.data(),
     };
 
     VkRenderPass render_pass;
