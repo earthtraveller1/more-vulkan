@@ -266,7 +266,8 @@ auto render_pass_t::create(
     const mv::vulkan_device_t &p_device,
     std::optional<VkFormat> color_format,
     std::optional<VkFormat> p_depth_format,
-    std::span<const VkSubpassDependency> p_dependencies
+    std::span<const VkSubpassDependency> p_dependencies,
+    VkImageLayout p_final_depth_layout
 ) -> render_pass_t {
     uint32_t attachment_counter = 0;
 
@@ -327,7 +328,7 @@ auto render_pass_t::create(
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .finalLayout = p_final_depth_layout,
         };
 
         depth_attachment_reference.attachment = attachment_counter;

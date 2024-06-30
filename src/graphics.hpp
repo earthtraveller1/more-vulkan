@@ -61,7 +61,8 @@ struct render_pass_t {
         std::optional<VkFormat> color_format,
         std::optional<VkFormat> depth_format,
         std::span<const VkSubpassDependency> subpass_dependencies =
-            std::array<VkSubpassDependency, 0>{}
+            std::array<VkSubpassDependency, 0>{},
+        VkImageLayout final_depth_layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     ) -> render_pass_t;
 
     ~render_pass_t() {
