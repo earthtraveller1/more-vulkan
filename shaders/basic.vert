@@ -14,14 +14,15 @@ layout (location = 3) out vec3 normal;
 layout (location = 4) flat out int id;
 layout (location = 5) out vec3 light_position;
 layout (location = 6) out vec3 fragment_position;
+layout (location = 7) out vec4 shadow_position;
 
 void main() {
-    view_position = uniform_buffer_object.view * uniform_buffer_object.model * vec4(a_position, 1.0);
-    gl_Position = uniform_buffer_object.projection * view_position;
+    gl_Position = (ubo.projection * ubo.view) * ubo.model * vec4(a_position, 1.0);
 
     x_pos = a_position.x;
     uv = a_uv;
     normal = a_normal;
     id = int(a_id);
-    fragment_position = (uniform_buffer_object.model * vec4(a_position, 1.0)).xyz;
+    fragment_position = (ubo.model * vec4(a_position, 1.0)).xyz;
+    shadow_position = ubo.light_mat * ubo.model * vec4(a_position, 1.0);
 }

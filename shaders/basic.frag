@@ -22,6 +22,7 @@ layout (location = 2) in vec4 view_position;
 layout (location = 3) in vec3 normal;
 layout (location = 4) flat in int id;
 layout (location = 6) in vec3 fragment_position;
+layout (location = 7) in vec4 shadow_position;
 
 vec3 calculate_diffuse(vec3 normal, vec3 light_direction, vec3 light_color) {
     const float diffuse_factor = max(0.0, dot(normal, light_direction));
@@ -36,6 +37,19 @@ vec3 calculate_specular(vec3 normal, vec3 light_direction, vec3 view_direction, 
 
 float calculate_attenuation(float distance, float c, float l, float q) {
     return 1.0 / (c + l*distance + q*distance*distance);
+}
+
+float calculate_shadow() {
+    vec3 shadow_position_real = shadow_position.xyz / shadow_position.w;
+    shadow_position_real.x = shadow_position_real.x * 0.5 + 0.5;
+    shadow_position_real.y = shadow_position_real.y * 0.5 + 0.5;
+    const float distance = texture(shadow_sampler, shadow_position_real.st).r;
+
+    if (shadow_position_real.z > distance) {
+        return 0.1;
+    }
+
+    return 1.0;
 }
 
 void main() {
@@ -56,23 +70,23 @@ void main() {
     const vec3 light_color = vec3(1.0, 1.0, 1.0);
 
     const vec3 normalized_normal = normalize(normal);
-    const vec3 light_direction = normalize(uniform_buffer_object.light_position - fragment_position);
+    const vec3 light_direction = normalize(ubo.light_position - fragment_position);
     const vec3 diffuse = calculate_diffuse(normalized_normal, light_direction, light_color);
 
-    const vec3 view_direction = normalize(uniform_buffer_object.camera_position - fragment_position);
+    const vec3 view_direction = normalize(ubo.camera_position - fragment_position);
     const vec3 specular = calculate_specular(normalized_normal, light_direction, view_direction, light_color);
 
-    const float distance = length(uniform_buffer_object.light_position - fragment_position);
+    const float distance = length(ubo.light_position - fragment_position);
     const float attenuation = calculate_attenuation(distance, 1.0, 0.22, 0.20);
 
     const vec3 ambient = vec3(0.01, 0.01, 0.01);
 
-    const float offset = dot(-uniform_buffer_object.global_light_direction, light_direction);
+    const float offset = dot(-ubo.global_light_direction, light_direction);
     const float cutoff = cos(radians(45.0));
 
     vec3 lighting;
     if (offset > cutoff) {
-        lighting = (specular * attenuation + ambient + diffuse * attenuation);
+        lighting = (specular * attenuation * calculate_shadow() + ambient + diffuse * attenuation * calculate_shadow());
     } else {
         lighting = ambient;
     }
