@@ -2,9 +2,8 @@
 
 #include "shadow.glsl"
 
-layout (location = 0) out float depth;
-layout (location = 0) in vec3 fragment_pos;
+layout (location = 0) out vec4 out_color;
 
 void main() {
-    depth = length(fragment_pos - ubo.light_position);
+    out_color = vec4(1.0, 0.0, 0.0, 1.0);
 }
