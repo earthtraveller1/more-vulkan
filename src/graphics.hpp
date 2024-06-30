@@ -58,7 +58,7 @@ struct render_pass_t {
 
     static auto create(
         const mv::vulkan_device_t &device,
-        VkFormat color_format,
+        std::optional<VkFormat> color_format,
         std::optional<VkFormat> depth_format
     ) -> render_pass_t;
 

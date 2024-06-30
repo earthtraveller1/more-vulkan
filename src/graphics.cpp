@@ -212,20 +212,9 @@ auto graphics_pipeline_t::create(
 
 auto render_pass_t::create(
     const mv::vulkan_device_t &p_device,
-    VkFormat color_format,
+    std::optional<VkFormat> color_format,
     std::optional<VkFormat> p_depth_format
 ) -> render_pass_t {
-    const VkAttachmentDescription color_attachment{
-        .format = color_format,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    };
-
     const VkAttachmentReference color_attachment_reference{
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -236,13 +225,29 @@ auto render_pass_t::create(
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
-    std::vector attachments{color_attachment};
+    std::vector<VkAttachmentDescription> attachments;
 
     VkSubpassDescription subpass{
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &color_attachment_reference,
     };
+
+    if (color_format.has_value()) {
+        const VkAttachmentDescription color_attachment{
+            .format = color_format.value(),
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        };
+
+        attachments.push_back(color_attachment);
+
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &color_attachment_reference;
+    }
 
     if (p_depth_format.has_value()) {
         const VkAttachmentDescription depth_attachment{
@@ -255,7 +260,7 @@ auto render_pass_t::create(
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
-        
+
         attachments.push_back(depth_attachment);
         subpass.pDepthStencilAttachment = &depth_attachment_reference;
     }
