@@ -67,13 +67,22 @@ struct render_pass_t {
     }
 };
 
-VkFramebuffer create_framebuffer(
+struct framebuffer_t {
+    VkFramebuffer framebuffer;
+    const vulkan_device_t& device;
+
+    ~framebuffer_t() {
+        vkDestroyFramebuffer(device.logical, framebuffer, nullptr);
+    }
+};
+
+auto create_framebuffer(
     const vulkan_device_t &device,
     const vulkan_image_view_t &image_view,
     uint32_t width,
     uint32_t height,
     const render_pass_t &render_pass
-);
+) -> framebuffer_t;
 
 struct vertex_t {
     glm::vec3 position;

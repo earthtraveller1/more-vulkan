@@ -215,12 +215,14 @@ auto render_pass_t::create(
     std::optional<VkFormat> color_format,
     std::optional<VkFormat> p_depth_format
 ) -> render_pass_t {
-    const VkAttachmentReference color_attachment_reference{
+    uint32_t attachment_counter = 0;
+
+    VkAttachmentReference color_attachment_reference{
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
 
-    const VkAttachmentReference depth_attachment_reference{
+    VkAttachmentReference depth_attachment_reference{
         .attachment = 1,
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
@@ -243,6 +245,9 @@ auto render_pass_t::create(
             .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         };
 
+        color_attachment_reference.attachment = attachment_counter;
+        attachment_counter += 1;
+
         attachments.push_back(color_attachment);
 
         subpass.colorAttachmentCount = 1;
@@ -260,6 +265,9 @@ auto render_pass_t::create(
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
+
+        depth_attachment_reference.attachment = attachment_counter;
+        attachment_counter += 1;
 
         attachments.push_back(depth_attachment);
         subpass.pDepthStencilAttachment = &depth_attachment_reference;
@@ -284,13 +292,13 @@ auto render_pass_t::create(
     return {render_pass, p_device};
 }
 
-VkFramebuffer create_framebuffer(
+auto create_framebuffer(
     const vulkan_device_t &device,
     const vulkan_image_view_t &image_view,
     uint32_t width,
     uint32_t height,
     const render_pass_t &render_pass
-) {
+) -> framebuffer_t {
     const VkFramebufferCreateInfo framebuffer_info{
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         .pNext = nullptr,
@@ -308,7 +316,7 @@ VkFramebuffer create_framebuffer(
         device.logical, &framebuffer_info, nullptr, &framebuffer
     ));
 
-    return framebuffer;
+    return {framebuffer, device};
 }
 
 auto descriptor_set_layout_t::create(
