@@ -151,11 +151,6 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto another_texture_memory_requirements =
         another_texture.get_memory_requirements();
 
-    auto shadow_texture =
-        mv::vulkan_image_t::create(device, 1024, 1024, VK_FORMAT_R32_SFLOAT);
-    const auto shadow_texture_memory_requirements =
-        shadow_texture.get_memory_requirements();
-
     auto shadow_depth_buffer =
         mv::vulkan_image_t::create_depth_attachment(device, 1024, 1024);
     const auto shadow_depth_buffer_memory_requirements =
@@ -164,7 +159,6 @@ int main(int p_argc, const char *const *const p_argv) try {
     const std::array memory_requirements{
         texture_memory_requirements,
         another_texture_memory_requirements,
-        shadow_texture_memory_requirements,
         shadow_depth_buffer_memory_requirements,
     };
 
@@ -176,16 +170,12 @@ int main(int p_argc, const char *const *const p_argv) try {
     image_memory.bind_image(
         another_texture, another_texture_memory_requirements
     );
-    image_memory.bind_image(shadow_texture, shadow_texture_memory_requirements);
     image_memory.bind_image(
         shadow_depth_buffer, shadow_depth_buffer_memory_requirements
     );
 
     texture.load_from_image(command_pool, texture_image);
     another_texture.load_from_image(command_pool, another_texture_image);
-    shadow_texture.transition_layout(
-        command_pool, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    );
     shadow_depth_buffer.transition_layout(
         command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     );
@@ -195,10 +185,6 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto another_texture_view = mv::vulkan_image_view_t::create(
         another_texture, VK_IMAGE_ASPECT_COLOR_BIT
-    );
-
-    const auto shadow_texture_view = mv::vulkan_image_view_t::create(
-        shadow_texture, VK_IMAGE_ASPECT_COLOR_BIT
     );
 
     const auto shadow_depth_buffer_view = mv::vulkan_image_view_t::create(
@@ -212,9 +198,9 @@ int main(int p_argc, const char *const *const p_argv) try {
         swapchain.create_framebuffers(render_pass, depth_buffer_view);
 
     const auto shadow_render_pass =
-        mv::render_pass_t::create(device, VK_FORMAT_R32_SFLOAT, {});
+        mv::render_pass_t::create(device, {}, shadow_depth_buffer.format);
     const auto shadow_framebuffer = mv::create_framebuffer(
-        device, shadow_texture_view, 1024, 1024, shadow_render_pass
+        device, shadow_depth_buffer_view, 1024, 1024, shadow_render_pass
     );
 
     const auto descriptor_set_layout = mv::descriptor_set_layout_t::create(
