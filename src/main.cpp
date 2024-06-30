@@ -150,7 +150,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         another_texture.get_memory_requirements();
 
     auto shadow_depth_buffer =
-        mv::vulkan_image_t::create_depth_attachment(device, 1024, 1024);
+        mv::vulkan_image_t::create_depth_attachment(device, 1024, 1024, true);
     const auto shadow_depth_buffer_memory_requirements =
         shadow_depth_buffer.get_memory_requirements();
 
@@ -174,10 +174,6 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     texture.load_from_image(command_pool, texture_image);
     another_texture.load_from_image(command_pool, another_texture_image);
-    shadow_depth_buffer.transition_layout(
-        command_pool, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-    );
-
     const auto texture_view =
         mv::vulkan_image_view_t::create(texture, VK_IMAGE_ASPECT_COLOR_BIT);
 
@@ -192,7 +188,18 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto shadow_sampler = shadow_depth_buffer.create_sampler();
 
     const auto render_pass = mv::render_pass_t::create(
-        device, swapchain.format, depth_buffer.format
+        device,
+        swapchain.format,
+        depth_buffer.format,
+        std::array{VkSubpassDependency{
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = 0,
+        }}
     );
     auto framebuffers =
         swapchain.create_framebuffers(render_pass, depth_buffer_view);
@@ -220,7 +227,8 @@ int main(int p_argc, const char *const *const p_argv) try {
                 .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
                 .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
             },
-        }
+        },
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
     );
 
     const auto shadow_framebuffer = mv::create_framebuffer(
@@ -353,7 +361,7 @@ int main(int p_argc, const char *const *const p_argv) try {
             texture_sampler.sampler, another_texture_view.image_view
         );
 
-        const VkDescriptorImageInfo shadow_info {
+        const VkDescriptorImageInfo shadow_info{
             .sampler = shadow_sampler.sampler,
             .imageView = shadow_depth_buffer_view.image_view,
             .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
@@ -633,6 +641,81 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         const VkClearValue clear_values[]{clear_color, clear_depth};
 
+        const VkRenderPassBeginInfo shadow_render_pass_begin_info{
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .pNext = nullptr,
+            .renderPass = shadow_render_pass.render_pass,
+            .framebuffer = shadow_framebuffer.framebuffer,
+            .renderArea =
+                {
+                    .offset = {0, 0},
+                    .extent =
+                        {
+                            .width = 1024,
+                            .height = 1024,
+                        },
+                },
+            .clearValueCount = 1,
+            .pClearValues = &clear_values[1],
+        };
+
+        vkCmdBeginRenderPass(
+            command_buffer,
+            &shadow_render_pass_begin_info,
+            VK_SUBPASS_CONTENTS_INLINE
+        );
+
+        auto data = shadow_uniform_buffer.map_memory();
+        memcpy(data, &shadow_ubo, sizeof(shadow_ubo));
+        shadow_uniform_buffer.unmap_memory();
+
+        vkCmdBindPipeline(
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            shadow_pipeline.pipeline
+        );
+
+        vkCmdBindDescriptorSets(
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            shadow_pipeline.layout,
+            0,
+            1,
+            &shadow_descriptor_set,
+            0,
+            nullptr
+        );
+
+        const VkViewport shadow_viewport{
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = 1024,
+            .height = 1024,
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f,
+        };
+
+        const VkRect2D shadow_scissor{
+            .offset = {0, 0},
+            .extent = {.width = 1024, .height = 1024},
+        };
+
+        vkCmdSetViewport(command_buffer, 0, 1, &shadow_viewport);
+        vkCmdSetScissor(command_buffer, 0, 1, &shadow_scissor);
+
+        const VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(
+            command_buffer, 0, 1, &vertex_buffer.buffer.buffer, &offset
+        );
+
+        vkCmdBindIndexBuffer(
+            command_buffer, index_buffer.buffer.buffer, 0, VK_INDEX_TYPE_UINT32
+        );
+
+        vkCmdDrawIndexed(command_buffer, cube.indices.size(), 1, 0, 0, 1);
+
+        vkCmdEndRenderPass(command_buffer);
+
         const VkRenderPassBeginInfo render_pass_begin_info{
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             .pNext = nullptr,
@@ -655,7 +738,7 @@ int main(int p_argc, const char *const *const p_argv) try {
             command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline
         );
 
-        const auto data = uniform_buffer.map_memory();
+        data = uniform_buffer.map_memory();
         memcpy(data, &ubo, sizeof ubo);
         uniform_buffer.unmap_memory();
 
@@ -687,7 +770,6 @@ int main(int p_argc, const char *const *const p_argv) try {
         vkCmdSetViewport(command_buffer, 0, 1, &viewport);
         vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-        const VkDeviceSize offset = 0;
         vkCmdBindVertexBuffers(
             command_buffer, 0, 1, &vertex_buffer.buffer.buffer, &offset
         );
@@ -716,7 +798,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         VK_ERROR(vkEndCommandBuffer(command_buffer));
 
         const VkPipelineStageFlags wait_stage =
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
         const VkSubmitInfo submit_info{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
