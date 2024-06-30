@@ -14,6 +14,7 @@ layout (push_constant) uniform push_constants_t {
 } push_constants;
 
 layout (binding = 1) uniform sampler2D texture_samplers[2];
+layout (binding = 2) uniform sampler2D shadow_sampler;
 
 layout (location = 0) in float x_pos;
 layout (location = 1) in vec2 uv;

@@ -189,15 +189,20 @@ int main(int p_argc, const char *const *const p_argv) try {
         shadow_depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
     );
 
+    const auto shadow_sampler = shadow_depth_buffer.create_sampler();
+
     const auto render_pass = mv::render_pass_t::create(
         device, swapchain.format, depth_buffer.format
     );
     auto framebuffers =
         swapchain.create_framebuffers(render_pass, depth_buffer_view);
 
-    const auto shadow_render_pass =
-        mv::render_pass_t::create(device, {}, shadow_depth_buffer.format, std::array {
-            VkSubpassDependency {
+    const auto shadow_render_pass = mv::render_pass_t::create(
+        device,
+        {},
+        shadow_depth_buffer.format,
+        std::array{
+            VkSubpassDependency{
                 .srcSubpass = VK_SUBPASS_EXTERNAL,
                 .dstSubpass = 0,
                 .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -206,7 +211,7 @@ int main(int p_argc, const char *const *const p_argv) try {
                 .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                 .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
             },
-            VkSubpassDependency {
+            VkSubpassDependency{
                 .srcSubpass = 0,
                 .dstSubpass = VK_SUBPASS_EXTERNAL,
                 .srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
@@ -215,7 +220,8 @@ int main(int p_argc, const char *const *const p_argv) try {
                 .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
                 .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
             },
-        });
+        }
+    );
 
     const auto shadow_framebuffer = mv::create_framebuffer(
         device, shadow_depth_buffer_view, 1024, 1024, shadow_render_pass
@@ -229,6 +235,9 @@ int main(int p_argc, const char *const *const p_argv) try {
             ),
             mv::vulkan_image_t::get_set_layout_binding(
                 1, 2, VK_SHADER_STAGE_FRAGMENT_BIT
+            ),
+            mv::vulkan_image_t::get_set_layout_binding(
+                2, 1, VK_SHADER_STAGE_FRAGMENT_BIT
             ),
         }
     );
@@ -344,6 +353,12 @@ int main(int p_argc, const char *const *const p_argv) try {
             texture_sampler.sampler, another_texture_view.image_view
         );
 
+        const VkDescriptorImageInfo shadow_info {
+            .sampler = shadow_sampler.sampler,
+            .imageView = shadow_depth_buffer_view.image_view,
+            .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+        };
+
         const std::array set_writes{
             VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -378,6 +393,18 @@ int main(int p_argc, const char *const *const p_argv) try {
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .pImageInfo = &image2_info,
+                .pBufferInfo = nullptr,
+                .pTexelBufferView = nullptr,
+            },
+            VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
+                .dstSet = descriptor_set,
+                .dstBinding = 2,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &shadow_info,
                 .pBufferInfo = nullptr,
                 .pTexelBufferView = nullptr,
             }
