@@ -28,6 +28,7 @@ struct uniform_buffer_object_t {
     glm::mat4 projection;
     glm::mat4 view;
     glm::mat4 model;
+    glm::mat4 light_mat;
     alignas(16) glm::vec3 light_position;
     alignas(16) glm::vec3 global_light_direction;
     alignas(16) glm::vec3 camera_position;
@@ -81,6 +82,9 @@ auto recreate_swapchain(
         swapchain.create_framebuffers(render_pass, depth_buffer_view);
 }
 } // namespace
+//
+
+#define SHADOW_SIZE 4096
 
 int main(int p_argc, const char *const *const p_argv) try {
     bool enable_validation = false;
@@ -150,7 +154,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         another_texture.get_memory_requirements();
 
     auto shadow_depth_buffer =
-        mv::vulkan_image_t::create_depth_attachment(device, 1024, 1024, true);
+        mv::vulkan_image_t::create_depth_attachment(device, SHADOW_SIZE, SHADOW_SIZE, true);
     const auto shadow_depth_buffer_memory_requirements =
         shadow_depth_buffer.get_memory_requirements();
 
@@ -232,7 +236,7 @@ int main(int p_argc, const char *const *const p_argv) try {
     );
 
     const auto shadow_framebuffer = mv::create_framebuffer(
-        device, shadow_depth_buffer_view, 1024, 1024, shadow_render_pass
+        device, shadow_depth_buffer_view, SHADOW_SIZE, SHADOW_SIZE, shadow_render_pass
     );
 
     const auto descriptor_set_layout = mv::descriptor_set_layout_t::create(
@@ -452,24 +456,10 @@ int main(int p_argc, const char *const *const p_argv) try {
 
     const auto light_direction = glm::normalize(glm::vec3(-1.7f, 2.0f, 3.0f));
 
-    uniform_buffer_object_t ubo{
-        .projection = glm::perspective(
-            45.0f,
-            static_cast<float>(window.width) /
-                static_cast<float>(window.height),
-            0.1f,
-            100.0f
-        ),
-        .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 4.0f)),
-        .model = glm::mat4(1.0f),
-        .light_position = light_position,
-        .global_light_direction = light_direction,
-        .camera_position = glm::vec3(0.0f)
-    };
-
     const auto light_right =
         glm::normalize(glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), light_direction)
         );
+
     mv::first_person_camera_t light_camera{
         light_position,
         light_direction,
@@ -482,6 +472,22 @@ int main(int p_argc, const char *const *const p_argv) try {
         .view = light_camera.look_at(),
         .model = glm::mat4(1.0f),
         .light_position = light_position,
+    };
+
+    uniform_buffer_object_t ubo{
+        .projection = glm::perspective(
+            45.0f,
+            static_cast<float>(window.width) /
+                static_cast<float>(window.height),
+            0.1f,
+            100.0f
+        ),
+        .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 4.0f)),
+        .model = glm::mat4(1.0f),
+        .light_mat = shadow_ubo.projection * shadow_ubo.view,
+        .light_position = light_position,
+        .global_light_direction = light_direction,
+        .camera_position = glm::vec3(0.0f)
     };
 
     mv::first_person_camera_t camera{
@@ -651,8 +657,8 @@ int main(int p_argc, const char *const *const p_argv) try {
                     .offset = {0, 0},
                     .extent =
                         {
-                            .width = 1024,
-                            .height = 1024,
+                            .width = SHADOW_SIZE,
+                            .height = SHADOW_SIZE,
                         },
                 },
             .clearValueCount = 1,
@@ -689,15 +695,15 @@ int main(int p_argc, const char *const *const p_argv) try {
         const VkViewport shadow_viewport{
             .x = 0.0f,
             .y = 0.0f,
-            .width = 1024,
-            .height = 1024,
+            .width = SHADOW_SIZE,
+            .height = SHADOW_SIZE,
             .minDepth = 0.0f,
             .maxDepth = 1.0f,
         };
 
         const VkRect2D shadow_scissor{
             .offset = {0, 0},
-            .extent = {.width = 1024, .height = 1024},
+            .extent = {.width = SHADOW_SIZE, .height = SHADOW_SIZE},
         };
 
         vkCmdSetViewport(command_buffer, 0, 1, &shadow_viewport);
