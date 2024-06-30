@@ -23,6 +23,8 @@ auto graphics_pipeline_t::create(
 ) -> graphics_pipeline_t {
     const VkPipelineLayoutCreateInfo pipeline_layout_create_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .setLayoutCount =
             static_cast<uint32_t>(p_descriptor_set_layouts.size()),
         .pSetLayouts = p_descriptor_set_layouts.data(),
@@ -49,6 +51,8 @@ auto graphics_pipeline_t::create(
 
     const VkShaderModuleCreateInfo vertex_shader_module_create_info{
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .codeSize = vertex_shader_code.size(),
         .pCode = reinterpret_cast<const uint32_t *>(vertex_shader_code.data()),
     };
@@ -67,6 +71,8 @@ auto graphics_pipeline_t::create(
 
     const VkShaderModuleCreateInfo fragment_shader_module_create_info{
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .codeSize = fragment_shader_code.size(),
         .pCode =
             reinterpret_cast<const uint32_t *>(fragment_shader_code.data()),
@@ -87,20 +93,28 @@ auto graphics_pipeline_t::create(
     const std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages{
         VkPipelineShaderStageCreateInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
             .stage = VK_SHADER_STAGE_VERTEX_BIT,
             .module = vertex_shader_module,
             .pName = "main",
+            .pSpecializationInfo = nullptr
         },
         VkPipelineShaderStageCreateInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
             .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
             .module = fragment_shader_module,
             .pName = "main",
+            .pSpecializationInfo = nullptr,
         },
     };
 
     const VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .vertexBindingDescriptionCount = 1,
         .pVertexBindingDescriptions = &vertex_input_binding_description,
         .vertexAttributeDescriptionCount = vertex_attribute_descriptions.size(),
@@ -109,54 +123,88 @@ auto graphics_pipeline_t::create(
 
     const VkPipelineInputAssemblyStateCreateInfo input_assembly_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         .primitiveRestartEnable = VK_FALSE,
     };
 
     const VkPipelineViewportStateCreateInfo viewport_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .viewportCount = 1,
+        .pViewports = nullptr,
         .scissorCount = 1,
+        .pScissors = nullptr
     };
 
     const VkPipelineRasterizationStateCreateInfo rasterization_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .depthClampEnable = VK_FALSE,
         .rasterizerDiscardEnable = VK_FALSE,
         .polygonMode = VK_POLYGON_MODE_FILL,
         .cullMode = VK_CULL_MODE_BACK_BIT,
         .frontFace = VK_FRONT_FACE_CLOCKWISE,
         .depthBiasEnable = VK_FALSE,
+        .depthBiasConstantFactor = 0.0f,
+        .depthBiasClamp = 0.0f,
+        .depthBiasSlopeFactor = 0.0f,
         .lineWidth = 1.0f,
     };
 
     const VkPipelineMultisampleStateCreateInfo multisample_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
         .sampleShadingEnable = VK_FALSE,
+        .minSampleShading = 0.0f,
+        .pSampleMask = nullptr,
+        .alphaToCoverageEnable = VK_FALSE,
+        .alphaToOneEnable = VK_FALSE,
     };
 
     const VkPipelineDepthStencilStateCreateInfo depth_stencil_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .depthTestEnable = VK_TRUE,
         .depthWriteEnable = VK_TRUE,
         .depthCompareOp = VK_COMPARE_OP_LESS,
         .depthBoundsTestEnable = VK_FALSE,
-        .stencilTestEnable = VK_FALSE
+        .stencilTestEnable = VK_FALSE,
+        .front = {},
+        .back = {},
+        .minDepthBounds = 0.0f,
+        .maxDepthBounds = 0.0f,
     };
 
     const VkPipelineColorBlendAttachmentState color_blend_attachment{
         .blendEnable = VK_FALSE,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .colorBlendOp = VK_BLEND_OP_ADD,
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .alphaBlendOp = VK_BLEND_OP_ADD,
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                           VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
     };
 
     const VkPipelineColorBlendStateCreateInfo color_blend_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .logicOpEnable = VK_FALSE,
         .logicOp = VK_LOGIC_OP_COPY,
         .attachmentCount = 1,
         .pAttachments = &color_blend_attachment,
+        .blendConstants = {
+            0, 0, 0, 0,
+        },
     };
 
     const std::array<VkDynamicState, 2> dynamic_states{
@@ -166,12 +214,16 @@ auto graphics_pipeline_t::create(
 
     const VkPipelineDynamicStateCreateInfo dynamic_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .dynamicStateCount = dynamic_states.size(),
         .pDynamicStates = dynamic_states.data(),
     };
 
     const VkGraphicsPipelineCreateInfo pipeline_create_info{
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .stageCount = static_cast<uint32_t>(shader_stages.size()),
         .pStages = shader_stages.data(),
         .pVertexInputState = &vertex_input_state_create_info,
@@ -230,11 +282,21 @@ auto render_pass_t::create(
     std::vector<VkAttachmentDescription> attachments;
 
     VkSubpassDescription subpass{
+        .flags = 0,
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .inputAttachmentCount = 0,
+        .pInputAttachments = nullptr,
+        .colorAttachmentCount = 0,
+        .pColorAttachments = nullptr,
+        .pResolveAttachments = nullptr,
+        .pDepthStencilAttachment = nullptr,
+        .preserveAttachmentCount = 0,
+        .pPreserveAttachments = nullptr,
     };
 
     if (color_format.has_value()) {
         const VkAttachmentDescription color_attachment{
+            .flags = 0,
             .format = color_format.value(),
             .samples = VK_SAMPLE_COUNT_1_BIT,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -256,6 +318,7 @@ auto render_pass_t::create(
 
     if (p_depth_format.has_value()) {
         const VkAttachmentDescription depth_attachment{
+            .flags = 0,
             .format = p_depth_format.value(),
             .samples = VK_SAMPLE_COUNT_1_BIT,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -275,10 +338,14 @@ auto render_pass_t::create(
 
     const VkRenderPassCreateInfo render_pass_create_info{
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .attachmentCount = static_cast<uint32_t>(attachments.size()),
         .pAttachments = attachments.data(),
         .subpassCount = 1,
         .pSubpasses = &subpass,
+        .dependencyCount = 0,
+        .pDependencies = nullptr,
     };
 
     VkRenderPass render_pass;
@@ -325,6 +392,8 @@ auto descriptor_set_layout_t::create(
 ) -> descriptor_set_layout_t {
     const VkDescriptorSetLayoutCreateInfo layout_info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .bindingCount = static_cast<uint32_t>(bindings.size()),
         .pBindings = bindings.data(),
     };
@@ -343,6 +412,8 @@ auto descriptor_pool_t::create(
 ) -> descriptor_pool_t {
     const VkDescriptorPoolCreateInfo pool_info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .maxSets = max_sets,
         .poolSizeCount = static_cast<uint32_t>(pool_sizes.size()),
         .pPoolSizes = pool_sizes.data(),
@@ -360,6 +431,7 @@ auto descriptor_pool_t::allocate_descriptor_set(
 ) const -> VkDescriptorSet {
     VkDescriptorSetAllocateInfo alloc_info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .pNext = nullptr,
         .descriptorPool = pool,
         .descriptorSetCount = 1,
         .pSetLayouts = &layout.layout,

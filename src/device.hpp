@@ -3,8 +3,6 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
-#include "common.hpp"
-
 namespace mv {
 struct vulkan_instance_t {
     VkInstance instance;

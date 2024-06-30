@@ -61,6 +61,8 @@ auto vulkan_image_t::create(
 ) -> vulkan_image_t {
     const VkImageCreateInfo image_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = format,
         .extent = {.width = width, .height = height, .depth = 1},
@@ -69,6 +71,9 @@ auto vulkan_image_t::create(
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
     };
 
@@ -115,6 +120,8 @@ auto vulkan_image_t::create_depth_attachment(
 
     const VkImageCreateInfo image_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = *format,
         .extent =
@@ -128,7 +135,10 @@ auto vulkan_image_t::create_depth_attachment(
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
     VkImage image;
@@ -163,6 +173,8 @@ auto vulkan_image_t::load_from_image(
 auto vulkan_image_t::create_sampler() const -> sampler_t {
     const VkSamplerCreateInfo sampler_create_info{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .magFilter = VK_FILTER_LINEAR,
         .minFilter = VK_FILTER_LINEAR,
         .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
@@ -195,7 +207,9 @@ auto vulkan_image_t::copy_from_buffer(
 
     const VkCommandBufferBeginInfo begin_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+        .pNext = nullptr,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        .pInheritanceInfo = nullptr,
     };
 
     VK_ERROR(vkBeginCommandBuffer(command_buffer, &begin_info));
@@ -229,8 +243,14 @@ auto vulkan_image_t::copy_from_buffer(
 
     const VkSubmitInfo submit_info{
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .pWaitDstStageMask = nullptr,
         .commandBufferCount = 1,
-        .pCommandBuffers = &command_buffer
+        .pCommandBuffers = &command_buffer,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = nullptr,
     };
 
     VK_ERROR(
@@ -245,7 +265,9 @@ auto vulkan_image_t::transition_layout(
 
     const VkCommandBufferBeginInfo begin_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+        .pNext = nullptr,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        .pInheritanceInfo = nullptr,
     };
 
     VK_ERROR(vkBeginCommandBuffer(command_buffer, &begin_info));
@@ -310,6 +332,7 @@ auto vulkan_image_t::transition_layout(
 
     VkImageMemoryBarrier barrier{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = nullptr,
         .srcAccessMask = masks.src_access_mask, // TODO
         .dstAccessMask = masks.dst_access_mask, // TODO
         .oldLayout = this->layout,
@@ -361,8 +384,14 @@ auto vulkan_image_t::transition_layout(
 
     const VkSubmitInfo submit_info{
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .pWaitDstStageMask = nullptr,
         .commandBufferCount = 1,
-        .pCommandBuffers = &command_buffer
+        .pCommandBuffers = &command_buffer,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = nullptr,
     };
 
     VK_ERROR(
@@ -377,6 +406,8 @@ auto vulkan_image_view_t::create(
 ) -> vulkan_image_view_t {
     const VkImageViewCreateInfo view_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .image = p_image.image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = p_image.format,

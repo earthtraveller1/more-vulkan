@@ -80,8 +80,6 @@ auto recreate_swapchain(
     framebuffers =
         swapchain.create_framebuffers(render_pass, depth_buffer_view);
 }
-
-using mv::vertex_t;
 } // namespace
 
 int main(int p_argc, const char *const *const p_argv) try {
@@ -329,30 +327,39 @@ int main(int p_argc, const char *const *const p_argv) try {
         const std::array set_writes{
             VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
                 .dstSet = descriptor_set,
                 .dstBinding = 0,
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pImageInfo = nullptr,
                 .pBufferInfo = &buffer_info,
+                .pTexelBufferView = nullptr,
             },
             VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
                 .dstSet = descriptor_set,
                 .dstBinding = 1,
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .pImageInfo = &image_info,
+                .pBufferInfo = nullptr,
+                .pTexelBufferView = nullptr,
             },
             VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
                 .dstSet = descriptor_set,
                 .dstBinding = 1,
                 .dstArrayElement = 1,
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .pImageInfo = &image2_info,
+                .pBufferInfo = nullptr,
+                .pTexelBufferView = nullptr,
             }
         };
 
@@ -371,12 +378,15 @@ int main(int p_argc, const char *const *const p_argv) try {
         const std::array set_writes{
             VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
                 .dstSet = shadow_descriptor_set,
                 .dstBinding = 0,
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pImageInfo = nullptr,
                 .pBufferInfo = &buffer_info,
+                .pTexelBufferView = nullptr,
             },
         };
 
@@ -398,7 +408,8 @@ int main(int p_argc, const char *const *const p_argv) try {
         .view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 4.0f)),
         .model = glm::mat4(1.0f),
         .light_position = light_position,
-        .global_light_direction = light_direction
+        .global_light_direction = light_direction,
+        .camera_position = glm::vec3(0.0f)
     };
 
     const auto light_right =
@@ -558,6 +569,9 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         const VkCommandBufferBeginInfo begin_info{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .pInheritanceInfo = nullptr,
         };
 
         VK_ERROR(vkBeginCommandBuffer(command_buffer, &begin_info));
@@ -574,6 +588,7 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         const VkRenderPassBeginInfo render_pass_begin_info{
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .pNext = nullptr,
             .renderPass = render_pass.render_pass,
             .framebuffer = framebuffers.framebuffers.at(image_index),
             .renderArea =
@@ -658,6 +673,7 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         const VkSubmitInfo submit_info{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .pNext = nullptr,
             .waitSemaphoreCount = 1,
             .pWaitSemaphores = &image_available_semaphore.semaphore,
             .pWaitDstStageMask = &wait_stage,
@@ -673,11 +689,13 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         const VkPresentInfoKHR present_info{
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .pNext = nullptr,
             .waitSemaphoreCount = 1,
             .pWaitSemaphores = &render_done_semaphore.semaphore,
             .swapchainCount = 1,
             .pSwapchains = &swapchain.swapchain,
             .pImageIndices = &image_index,
+            .pResults = nullptr,
         };
 
         result = vkQueuePresentKHR(device.present_queue, &present_info);

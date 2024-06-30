@@ -14,6 +14,9 @@
 #include <vector>
 #include <span>
 
+#include "common.hpp"
+#include "errors.hpp"
+
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

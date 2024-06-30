@@ -4,7 +4,6 @@
 
 #include "common.hpp"
 #include "device.hpp"
-#include "errors.hpp"
 
 namespace mv {
 struct command_pool_t {

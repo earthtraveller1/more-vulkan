@@ -59,6 +59,8 @@ VKAPI_ATTR auto VKAPI_CALL debug_callback(
 
 const VkDebugUtilsMessengerCreateInfoEXT MESSENGER_CREATE_INFO{
     .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+    .pNext = nullptr,
+    .flags = 0,
     .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
@@ -68,6 +70,7 @@ const VkDebugUtilsMessengerCreateInfoEXT MESSENGER_CREATE_INFO{
                    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
                    VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT,
     .pfnUserCallback = debug_callback,
+    .pUserData = nullptr,
 };
 } // namespace
 
@@ -95,7 +98,11 @@ auto vulkan_instance_t::create(bool p_enable_validation) -> vulkan_instance_t {
 
     const VkApplicationInfo application_info{
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .pNext = nullptr,
         .pApplicationName = "Stupid Vulkan App",
+        .applicationVersion = 0,
+        .pEngineName = nullptr,
+        .engineVersion = 0,
         .apiVersion = VK_API_VERSION_1_2,
     };
 
@@ -119,6 +126,7 @@ auto vulkan_instance_t::create(bool p_enable_validation) -> vulkan_instance_t {
     VkInstanceCreateInfo instance_create_info{
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = &MESSENGER_CREATE_INFO,
+        .flags = 0,
         .pApplicationInfo = &application_info,
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = nullptr,
@@ -293,6 +301,8 @@ auto vulkan_device_t::create(VkInstance p_instance, VkSurfaceKHR p_surface)
 
     const VkDeviceCreateInfo device_create_info{
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .queueCreateInfoCount =
             static_cast<uint32_t>(queue_create_infos.size()),
         .pQueueCreateInfos = queue_create_infos.data(),

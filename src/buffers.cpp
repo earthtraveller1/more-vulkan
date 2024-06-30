@@ -8,6 +8,8 @@ auto buffer_t::create(
 ) -> buffer_t {
     const VkBufferCreateInfo buffer_create_info{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .size = p_size,
         .usage =
             [&]() {
@@ -33,6 +35,8 @@ auto buffer_t::create(
                 }
             }(),
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
     };
 
     VkBuffer buffer;
@@ -97,6 +101,7 @@ auto buffer_t::create(
 
     const VkMemoryAllocateInfo memory_allocate_info{
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext = nullptr,
         .allocationSize = memory_requirements.size,
         .memoryTypeIndex = memory_type_index.value(),
     };
@@ -121,6 +126,7 @@ auto buffer_t::copy_from(const buffer_t &p_other, VkCommandPool p_command_pool)
 
     const VkCommandBufferAllocateInfo command_buffer_allocate_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .pNext = nullptr,
         .commandPool = p_command_pool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1,
@@ -133,7 +139,9 @@ auto buffer_t::copy_from(const buffer_t &p_other, VkCommandPool p_command_pool)
 
     const VkCommandBufferBeginInfo begin_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        .pInheritanceInfo = nullptr,
     };
 
     VK_ERROR(vkBeginCommandBuffer(p_command_buffer, &begin_info));
@@ -152,8 +160,14 @@ auto buffer_t::copy_from(const buffer_t &p_other, VkCommandPool p_command_pool)
 
     const VkSubmitInfo submit_info{
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .pWaitDstStageMask = nullptr,
         .commandBufferCount = 1,
         .pCommandBuffers = &p_command_buffer,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = nullptr,
     };
 
     VK_ERROR(

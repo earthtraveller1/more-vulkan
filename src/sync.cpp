@@ -1,11 +1,10 @@
-#include "errors.hpp"
-
 #include "sync.hpp"
 
 auto mv::vulkan_fence_t::create(const vulkan_device_t &p_device)
     -> vulkan_fence_t {
     const VkFenceCreateInfo fence_info{
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = nullptr,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
 
@@ -18,6 +17,8 @@ auto mv::vulkan_semaphore_t::create(const vulkan_device_t &p_device)
     -> vulkan_semaphore_t {
     const VkSemaphoreCreateInfo semaphore_info{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
     };
 
     VkSemaphore semaphore;

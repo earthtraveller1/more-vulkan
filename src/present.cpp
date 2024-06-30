@@ -149,6 +149,8 @@ auto mv::swapchain_t::create(
 
     VkSwapchainCreateInfoKHR swapchain_create_info{
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .flags = 0,
         .surface = p_window.surface,
         .minImageCount = surface_capabilities.minImageCount + 1,
         .imageFormat = surface_format.format,
@@ -199,6 +201,8 @@ auto mv::swapchain_t::create(
     for (const auto &image : images) {
         VkImageViewCreateInfo image_view_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
             .image = image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = surface_format.format,
@@ -253,6 +257,8 @@ auto mv::swapchain_t::create_framebuffers(
 
         const VkFramebufferCreateInfo create_info{
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
             .renderPass = render_pass.render_pass,
             .attachmentCount = attachments.size(),
             .pAttachments = attachments.data(),
