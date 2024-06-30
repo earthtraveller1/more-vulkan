@@ -95,7 +95,7 @@ auto vulkan_image_t::create(
 }
 
 auto vulkan_image_t::create_depth_attachment(
-    const vulkan_device_t &device, uint32_t width, uint32_t height
+    const vulkan_device_t &device, uint32_t width, uint32_t height, bool p_sampled
 ) -> vulkan_image_t {
     const std::array format_candiates{
         VK_FORMAT_D32_SFLOAT,
@@ -118,7 +118,7 @@ auto vulkan_image_t::create_depth_attachment(
         }
     );
 
-    const VkImageCreateInfo image_create_info{
+    VkImageCreateInfo image_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
@@ -140,6 +140,10 @@ auto vulkan_image_t::create_depth_attachment(
         .pQueueFamilyIndices = nullptr,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
+
+    if (p_sampled) {
+        image_create_info.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    }
 
     VkImage image;
     VK_ERROR(vkCreateImage(device.logical, &image_create_info, nullptr, &image)

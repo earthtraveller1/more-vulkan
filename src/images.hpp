@@ -64,7 +64,7 @@ struct vulkan_image_t {
         -> vulkan_image_t;
 
     static auto create_depth_attachment(
-        const vulkan_device_t &device, uint32_t width, uint32_t height
+        const vulkan_device_t &device, uint32_t width, uint32_t height, bool sampled = false
     ) -> vulkan_image_t;
 
     auto
