@@ -189,7 +189,7 @@ int main(int p_argc, const char *const *const p_argv) try {
         shadow_depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
     );
 
-    const auto shadow_sampler = shadow_depth_buffer.create_sampler();
+    const auto shadow_sampler = shadow_depth_buffer.create_sampler(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
 
     const auto render_pass = mv::render_pass_t::create(
         device,

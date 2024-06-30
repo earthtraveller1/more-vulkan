@@ -45,7 +45,7 @@ float calculate_shadow() {
     shadow_position_real.y = shadow_position_real.y * 0.5 + 0.5;
     const float distance = texture(shadow_sampler, shadow_position_real.st).r;
 
-    if (shadow_position_real.z > distance) {
+    if (shadow_position_real.z - 0.0005 > distance) {
         return 0.1;
     }
 

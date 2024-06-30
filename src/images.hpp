@@ -2,6 +2,7 @@
 
 #include <stb_image.h>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include "commands.hpp"
 #include "common.hpp"
@@ -85,7 +86,7 @@ struct vulkan_image_t {
         }
     };
 
-    auto create_sampler() const -> sampler_t;
+    auto create_sampler(VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT) const -> sampler_t;
 
     auto copy_from_buffer(
         const buffer_t &source, const command_pool_t &command_pool
