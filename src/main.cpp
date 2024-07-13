@@ -345,7 +345,7 @@ int main(int p_argc, const char *const *const p_argv) try {
             },
             VkDescriptorPoolSize{
                 .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = 2,
+                .descriptorCount = 3,
             }
         },
         2
