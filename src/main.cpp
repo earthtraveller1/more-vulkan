@@ -861,6 +861,9 @@ int main(int p_argc, const char *const *const p_argv) try {
 
         const auto end_time = glfwGetTime();
         delta_time = end_time - start_time;
+
+        std::cout << "FPS: " << (1.0 / delta_time) << "                   \r";
+        std::cout.flush();
     }
 
     vkDeviceWaitIdle(device.logical);
