@@ -125,7 +125,7 @@ auto vulkan_instance_t::create(bool p_enable_validation) -> vulkan_instance_t {
 
     VkInstanceCreateInfo instance_create_info{
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pNext = &MESSENGER_CREATE_INFO,
+        .pNext = nullptr,
         .flags = 0,
         .pApplicationInfo = &application_info,
         .enabledLayerCount = 0,
@@ -138,6 +138,7 @@ auto vulkan_instance_t::create(bool p_enable_validation) -> vulkan_instance_t {
     if (p_enable_validation) {
         instance_create_info.enabledLayerCount = validation_layer_count;
         instance_create_info.ppEnabledLayerNames = validation_layers;
+        instance_create_info.pNext = &MESSENGER_CREATE_INFO;
     }
 
     VkInstance instance;
