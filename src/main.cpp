@@ -153,8 +153,9 @@ int main(int p_argc, const char *const *const p_argv) try {
     const auto another_texture_memory_requirements =
         another_texture.get_memory_requirements();
 
-    auto shadow_depth_buffer =
-        mv::vulkan_image_t::create_depth_attachment(device, SHADOW_SIZE, SHADOW_SIZE, true);
+    auto shadow_depth_buffer = mv::vulkan_image_t::create_depth_attachment(
+        device, SHADOW_SIZE, SHADOW_SIZE, true
+    );
     const auto shadow_depth_buffer_memory_requirements =
         shadow_depth_buffer.get_memory_requirements();
 
@@ -189,7 +190,9 @@ int main(int p_argc, const char *const *const p_argv) try {
         shadow_depth_buffer, VK_IMAGE_ASPECT_DEPTH_BIT
     );
 
-    const auto shadow_sampler = shadow_depth_buffer.create_sampler(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    const auto shadow_sampler =
+        shadow_depth_buffer.create_sampler(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+        );
 
     const auto render_pass = mv::render_pass_t::create(
         device,
@@ -236,7 +239,11 @@ int main(int p_argc, const char *const *const p_argv) try {
     );
 
     const auto shadow_framebuffer = mv::create_framebuffer(
-        device, shadow_depth_buffer_view, SHADOW_SIZE, SHADOW_SIZE, shadow_render_pass
+        device,
+        shadow_depth_buffer_view,
+        SHADOW_SIZE,
+        SHADOW_SIZE,
+        shadow_render_pass
     );
 
     const auto descriptor_set_layout = mv::descriptor_set_layout_t::create(
@@ -504,6 +511,12 @@ int main(int p_argc, const char *const *const p_argv) try {
     double previous_mouse_y = 0.0;
     bool has_mouse_set = false;
     bool should_follow_mouse = true;
+
+    std::array<double, 60> framerates{};
+    std::memset(
+        framerates.data(), 0, framerates.size() * sizeof(framerates[0])
+    );
+    size_t framerate_index = 0;
 
     glfwShowWindow(window.window);
     while (!glfwWindowShouldClose(window.window)) {
@@ -862,7 +875,17 @@ int main(int p_argc, const char *const *const p_argv) try {
         const auto end_time = glfwGetTime();
         delta_time = end_time - start_time;
 
-        std::cout << "FPS: " << (1.0 / delta_time) << "                   \r";
+        framerates[framerate_index] = (1.0 / delta_time);
+        framerate_index += 1;
+        if (framerate_index >= framerates.size()) framerate_index = 0;
+        
+        double average_fps = 0.0;
+        for (const auto fps : framerates) {
+            average_fps += fps;
+        }
+        average_fps /= (double)framerates.size();
+
+        std::cout << "FPS: " << average_fps << "                   \r";
         std::cout.flush();
     }
 
